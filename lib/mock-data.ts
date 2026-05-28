@@ -3,11 +3,12 @@
  * Simula o que viria do banco de dados (Prisma/PostgreSQL)
  */
 
-import { User, EventType, Availability, Appointment } from "./types";
+import { User, EventType, Availability, Appointment, CalendarIntegration } from "./types";
 
 export const MOCK_USER: User = {
   id: "usr_001",
   name: "Cláudio Fernandes",
+  role: "Arquiteto de Soluções",
   email: "claudio@aetheric.com",
   username: "claudio",
   avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face",
@@ -139,12 +140,36 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
   },
 ];
 
-/** Gera time slots disponíveis para uma data */
+export const MOCK_CALENDAR_INTEGRATIONS: CalendarIntegration[] = [
+  {
+    id: "cal_001",
+    userId: "usr_001",
+    provider: "GOOGLE",
+    isActive: true,
+    calendarId: "primary",
+  },
+];
+
+/** Gera time slots disponíveis para uma data, excluindo conflitos com agendamentos existentes */
 export function generateTimeSlots(date: Date, duration: number = 30): string[] {
   const dayOfWeek = date.getDay();
   const availabilities = MOCK_AVAILABILITY.filter(
     (a) => a.dayOfWeek === dayOfWeek && a.isActive
   );
+
+  // Blocos ocupados por agendamentos CONFIRMED ou PENDING no mesmo dia
+  const busyRanges = MOCK_APPOINTMENTS.filter((apt) => {
+    if (apt.status !== "CONFIRMED" && apt.status !== "PENDING") return false;
+    const aptDate = new Date(apt.startTime);
+    return (
+      aptDate.getFullYear() === date.getFullYear() &&
+      aptDate.getMonth() === date.getMonth() &&
+      aptDate.getDate() === date.getDate()
+    );
+  }).map((apt) => ({
+    start: new Date(apt.startTime),
+    end: new Date(apt.endTime),
+  }));
 
   const slots: string[] = [];
   for (const avail of availabilities) {
@@ -154,9 +179,19 @@ export function generateTimeSlots(date: Date, duration: number = 30): string[] {
     const endMinutes = endH * 60 + endM;
 
     for (let m = startMinutes; m + duration <= endMinutes; m += duration) {
-      const h = Math.floor(m / 60);
-      const min = m % 60;
-      slots.push(`${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`);
+      const slotStart = new Date(date);
+      slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
+      const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
+
+      const hasConflict = busyRanges.some(
+        (busy) => slotStart < busy.end && slotEnd > busy.start
+      );
+
+      if (!hasConflict) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        slots.push(`${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`);
+      }
     }
   }
 

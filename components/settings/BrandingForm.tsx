@@ -12,15 +12,46 @@ import { PRESET_PALETTES, readableOn } from "@/lib/theme";
 import { Icon } from "@/components/ui/Icon";
 
 const MAX_WELCOME = 240;
+const MAX_SERVICE_TYPES = 5;
+const DURATION_OPTIONS = [15, 30, 45, 60, 90];
+
+interface ServiceTypeEntry {
+  id: string;
+  title: string;
+  duration: number;
+}
 
 export default function BrandingForm() {
   const [name, setName] = useState(MOCK_USER.name);
+  const [role, setRole] = useState(MOCK_USER.role ?? "");
+  const [email, setEmail] = useState(MOCK_USER.email);
   const [welcomeMessage, setWelcomeMessage] = useState(MOCK_USER.welcomeMessage ?? "");
   const [primaryColor, setPrimaryColor] = useState(MOCK_USER.primaryColor);
   const [primaryContainer, setPrimaryContainer] = useState(MOCK_USER.primaryContainer);
   const [avatarPreview, setAvatarPreview] = useState(MOCK_USER.avatarUrl ?? "");
   const [bannerPreview, setBannerPreview] = useState(MOCK_USER.bannerUrl ?? "");
   const [saved, setSaved] = useState(false);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeEntry[]>(
+    MOCK_EVENT_TYPES.map((e) => ({ id: e.id, title: e.title, duration: e.duration }))
+  );
+
+  function addServiceType() {
+    if (serviceTypes.length >= MAX_SERVICE_TYPES) return;
+    setServiceTypes((prev) => [
+      ...prev,
+      { id: `evt_new_${Date.now()}`, title: "", duration: 30 },
+    ]);
+  }
+
+  function removeServiceType(id: string) {
+    setServiceTypes((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function updateServiceType(id: string, field: "title" | "duration", value: string | number) {
+    setServiceTypes((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+  }
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -183,8 +214,8 @@ export default function BrandingForm() {
           </div>
         </FormSection>
 
-        {/* ─── Copy ─── */}
-        <FormSection title="Textos" caption="Aparecem no cabeçalho da página pública.">
+        {/* ─── Host profile ─── */}
+        <FormSection title="Perfil do Anfitrião" caption="Informações exibidas na página pública de reserva.">
           <div className="space-y-5">
             <Field label="Nome exibido" hint="Pode ser o nome da empresa ou do profissional.">
               <input
@@ -192,14 +223,33 @@ export default function BrandingForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={80}
-                className="
-                  w-full h-10 px-3 text-sm
-                  bg-[var(--color-surface)] border border-[var(--color-border-strong)]
-                  rounded-[var(--radius-sm)] text-[var(--ink-900)]
-                  outline-none focus:border-[var(--ink-900)]
-                "
+                className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)]"
               />
             </Field>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Cargo">
+                <input
+                  type="text"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  maxLength={80}
+                  placeholder="Ex.: Arquiteto de Soluções"
+                  className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)]"
+                />
+              </Field>
+
+              <Field label="E-mail do Anfitrião">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={120}
+                  placeholder="contato@empresa.com"
+                  className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)]"
+                />
+              </Field>
+            </div>
 
             <Field
               label="Mensagem de boas-vindas"
@@ -210,15 +260,65 @@ export default function BrandingForm() {
                 onChange={(e) => setWelcomeMessage(e.target.value.slice(0, MAX_WELCOME))}
                 rows={3}
                 placeholder="Ex.: Agende uma reunião com a nossa equipe técnica."
-                className="
-                  w-full px-3 py-2.5 text-sm leading-relaxed
-                  bg-[var(--color-surface)] border border-[var(--color-border-strong)]
-                  rounded-[var(--radius-sm)] text-[var(--ink-900)] resize-none
-                  outline-none focus:border-[var(--ink-900)]
-                "
+                className="w-full px-3 py-2.5 text-sm leading-relaxed bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] resize-none outline-none focus:border-[var(--ink-900)]"
               />
             </Field>
           </div>
+        </FormSection>
+
+        {/* ─── Service types ─── */}
+        <FormSection
+          title="Tipos de serviço"
+          caption={`Defina até ${MAX_SERVICE_TYPES} tipos de reunião e o tempo estimado de cada um.`}
+        >
+          <div className="space-y-2">
+            {serviceTypes.map((svc, idx) => (
+              <div key={svc.id} className="flex items-center gap-2">
+                <span className="label text-[10px] w-5 text-center shrink-0 tabular-nums">
+                  {idx + 1}
+                </span>
+                <input
+                  type="text"
+                  value={svc.title}
+                  onChange={(e) => updateServiceType(svc.id, "title", e.target.value)}
+                  placeholder="Nome do serviço"
+                  maxLength={60}
+                  className="flex-1 h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)] min-w-0"
+                />
+                <select
+                  value={svc.duration}
+                  onChange={(e) => updateServiceType(svc.id, "duration", Number(e.target.value))}
+                  className="w-28 h-10 px-2 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)] shrink-0"
+                >
+                  {DURATION_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d} min
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeServiceType(svc.id)}
+                  disabled={serviceTypes.length === 1}
+                  className="w-9 h-9 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:text-[var(--ink-900)] hover:bg-[var(--color-surface-2)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                  aria-label="Remover tipo de serviço"
+                >
+                  <Icon name="x" size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {serviceTypes.length < MAX_SERVICE_TYPES && (
+            <button
+              type="button"
+              onClick={addServiceType}
+              className="mt-3 inline-flex items-center gap-1.5 h-9 px-3 text-sm font-medium text-[var(--color-muted)] border border-dashed border-[var(--color-border-strong)] hover:border-[var(--ink-900)] hover:text-[var(--ink-900)] rounded-[var(--radius-sm)] transition-colors"
+            >
+              <Icon name="plus" size={14} strokeWidth={2} />
+              Adicionar tipo de serviço
+            </button>
+          )}
         </FormSection>
 
         <div className="flex items-center justify-between gap-3 pt-2">
@@ -280,26 +380,31 @@ export default function BrandingForm() {
             <h3 className="font-display text-[18px] leading-tight tracking-tight text-[var(--ink-900)] mt-1">
               {name || "Sua empresa"}
             </h3>
+            {role && (
+              <p className="text-[11px] font-medium text-[var(--color-muted)] mt-0.5">
+                {role}
+              </p>
+            )}
             <p className="text-[12px] text-[var(--color-muted)] mt-1 leading-relaxed">
               {welcomeMessage || "A mensagem aparece aqui."}
             </p>
 
             <div className="mt-4 space-y-1.5">
-              {MOCK_EVENT_TYPES.slice(0, 2).map((evt) => (
+              {serviceTypes.filter((s) => s.title).slice(0, 2).map((svc) => (
                 <div
-                  key={evt.id}
+                  key={svc.id}
                   className="flex items-center justify-between gap-3 px-3 py-2.5 border border-[var(--color-border)] rounded-[var(--radius-sm)]"
                 >
                   <div className="min-w-0">
                     <p className="text-[12px] font-medium text-[var(--ink-900)] truncate">
-                      {evt.title}
+                      {svc.title}
                     </p>
                     <p className="text-[10px] text-[var(--color-muted)] font-mono">
-                      {evt.duration} min
+                      {svc.duration} min
                     </p>
                   </div>
                   <span
-                    className="text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-sm"
+                    className="text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-sm shrink-0"
                     style={{
                       background: "var(--preview-brand)",
                       color: "var(--preview-brand-on)",

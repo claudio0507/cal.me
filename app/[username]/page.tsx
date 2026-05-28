@@ -8,9 +8,19 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { MOCK_USER, MOCK_EVENT_TYPES, generateTimeSlots } from "@/lib/mock-data";
+import { MOCK_USER, MOCK_EVENT_TYPES, MOCK_CALENDAR_INTEGRATIONS, generateTimeSlots } from "@/lib/mock-data";
 import type { EventType } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
+
+function generateMeetingLink(provider: "GOOGLE" | "MICROSOFT"): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  const rand = (n: number) =>
+    Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  if (provider === "GOOGLE") {
+    return `https://meet.google.com/${rand(3)}-${rand(4)}-${rand(3)}`;
+  }
+  return `https://teams.microsoft.com/l/meetup-join/${rand(8)}-${rand(4)}-${rand(4)}-${rand(4)}-${rand(12)}`;
+}
 
 type Step = "event" | "datetime" | "details" | "confirmed";
 
@@ -29,6 +39,15 @@ export default function BookingPage({
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [meetingLink, setMeetingLink] = useState<string | null>(null);
+
+  function handleConfirm() {
+    const activeIntegration = MOCK_CALENDAR_INTEGRATIONS.find((i) => i.isActive);
+    if (activeIntegration) {
+      setMeetingLink(generateMeetingLink(activeIntegration.provider));
+    }
+    setStep("confirmed");
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -73,6 +92,11 @@ export default function BookingPage({
                   <p className="font-display text-[20px] leading-tight tracking-tight text-[var(--ink-900)] mt-0.5">
                     {user.name}
                   </p>
+                  {user.role && (
+                    <p className="text-xs font-medium text-[var(--ink-700)] mt-0.5">
+                      {user.role}
+                    </p>
+                  )}
                   <p className="text-xs text-[var(--color-muted)] mt-0.5 truncate font-mono">
                     {user.email}
                   </p>
@@ -131,7 +155,7 @@ export default function BookingPage({
                 onChangeEmail={setGuestEmail}
                 onChangeNotes={setNotes}
                 onBack={() => setStep("datetime")}
-                onConfirm={() => setStep("confirmed")}
+                onConfirm={handleConfirm}
               />
             )}
 
@@ -141,6 +165,7 @@ export default function BookingPage({
                 date={selectedDate}
                 time={selectedTime}
                 guestName={guestName}
+                meetingLink={meetingLink}
               />
             )}
           </div>
@@ -593,12 +618,16 @@ function ConfirmedStep({
   date,
   time,
   guestName,
+  meetingLink,
 }: {
   event: EventType;
   date: Date;
   time: string;
   guestName: string;
+  meetingLink: string | null;
 }) {
+  const isTeams = meetingLink?.includes("teams.microsoft.com");
+
   return (
     <div className="text-center max-w-md mx-auto py-10 animate-fade-in">
       <div
@@ -621,9 +650,36 @@ function ConfirmedStep({
         foi enviado para o seu e-mail.
       </p>
 
-      <div className="text-left bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-5 mb-6">
+      <div className="text-left bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-5 mb-4">
         <Summary event={event} date={date} time={time} />
       </div>
+
+      {meetingLink && (
+        <a
+          href={meetingLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between gap-3 px-4 py-3 mb-6 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] text-left hover:bg-[var(--color-surface-2)] transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span
+              className="w-9 h-9 grid place-items-center rounded-[var(--radius-sm)] shrink-0"
+              style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
+            >
+              <Icon name="video" size={16} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-[var(--ink-900)]">
+                {isTeams ? "Reunião no Microsoft Teams" : "Reunião no Google Meet"}
+              </p>
+              <p className="text-[11px] text-[var(--color-muted)] font-mono truncate">
+                {meetingLink}
+              </p>
+            </div>
+          </div>
+          <Icon name="external-link" size={14} className="text-[var(--color-muted)] shrink-0 group-hover:text-[var(--ink-900)] transition-colors" />
+        </a>
+      )}
 
       <div className="flex gap-2 justify-center">
         <button
