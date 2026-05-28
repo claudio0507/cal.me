@@ -11,6 +11,7 @@ generator client {
 model User {
   id               String    @id @default(cuid())
   name             String
+  role             String?             // Cargo do anfitrião
   email            String    @unique
   username         String    @unique   // slug público da booking page: cal.me/username
   hashedPassword   String?
@@ -74,6 +75,7 @@ model Appointment {
   channel      Channel           @default(VIDEO)
   notes        String?
   cancelReason String?
+  meetingLink  String?           // link da reunião (Google Meet, Teams, Jitsi)
   icsToken     String?           @unique  // token único para o link de convite .ics
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt

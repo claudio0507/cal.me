@@ -151,14 +151,20 @@ export const MOCK_CALENDAR_INTEGRATIONS: CalendarIntegration[] = [
 ];
 
 /** Gera time slots disponíveis para uma data, excluindo conflitos com agendamentos existentes */
-export function generateTimeSlots(date: Date, duration: number = 30): string[] {
+export function generateTimeSlots(
+  date: Date,
+  duration: number = 30,
+  existingAppointments?: Array<{ startTime: string | Date; endTime: string | Date; status: string }>
+): string[] {
   const dayOfWeek = date.getDay();
   const availabilities = MOCK_AVAILABILITY.filter(
     (a) => a.dayOfWeek === dayOfWeek && a.isActive
   );
 
+  const source = existingAppointments ?? MOCK_APPOINTMENTS;
+
   // Blocos ocupados por agendamentos CONFIRMED ou PENDING no mesmo dia
-  const busyRanges = MOCK_APPOINTMENTS.filter((apt) => {
+  const busyRanges = source.filter((apt) => {
     if (apt.status !== "CONFIRMED" && apt.status !== "PENDING") return false;
     const aptDate = new Date(apt.startTime);
     return (

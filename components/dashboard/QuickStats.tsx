@@ -1,11 +1,6 @@
 "use client";
 
-/**
- * Cal.me — Quick Stats
- * Editorial-style metric strip. Tabular numerals, restrained type hierarchy.
- */
-
-import { MOCK_APPOINTMENTS } from "@/lib/mock-data";
+import type { Appointment } from "@/lib/types";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
 interface Stat {
@@ -15,24 +10,24 @@ interface Stat {
   hint?: string;
 }
 
-export default function QuickStats() {
+export default function QuickStats({ appointments }: { appointments: Appointment[] }) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
   const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const todayCount = MOCK_APPOINTMENTS.filter((a) => {
+  const todayCount = appointments.filter((a) => {
     const d = new Date(a.startTime);
     return d >= todayStart && d < tomorrowStart && a.status !== "CANCELLED";
   }).length;
 
-  const weekCount = MOCK_APPOINTMENTS.filter((a) => {
+  const weekCount = appointments.filter((a) => {
     const d = new Date(a.startTime);
     return d >= todayStart && d < weekEnd && a.status !== "CANCELLED";
   }).length;
 
-  const pendingCount = MOCK_APPOINTMENTS.filter((a) => a.status === "PENDING").length;
-  const completedCount = MOCK_APPOINTMENTS.filter((a) => a.status === "COMPLETED").length;
+  const pendingCount = appointments.filter((a) => a.status === "PENDING").length;
+  const completedCount = appointments.filter((a) => a.status === "COMPLETED").length;
 
   const stats: Stat[] = [
     { icon: "calendar", label: "Hoje", value: todayCount, hint: "Confirmados + pendentes" },

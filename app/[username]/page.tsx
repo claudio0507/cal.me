@@ -1,37 +1,66 @@
 "use client";
 
-/**
- * Cal.me — Public booking page
- * Tenant-themed: header pulls white-label settings, date/time picker is
- * neutral but accents (CTAs, selected state) inherit `--color-brand`.
- */
-
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MOCK_USER, MOCK_EVENT_TYPES, MOCK_CALENDAR_INTEGRATIONS, generateTimeSlots } from "@/lib/mock-data";
+import { generateTimeSlots } from "@/lib/mock-data";
 import type { EventType } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
-
-function generateMeetingLink(provider: "GOOGLE" | "MICROSOFT"): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz";
-  const rand = (n: number) =>
-    Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  if (provider === "GOOGLE") {
-    return `https://meet.google.com/${rand(3)}-${rand(4)}-${rand(3)}`;
-  }
-  return `https://teams.microsoft.com/l/meetup-join/${rand(8)}-${rand(4)}-${rand(4)}-${rand(4)}-${rand(12)}`;
-}
+import { getThemeStyleVars } from "@/lib/theme";
 
 type Step = "event" | "datetime" | "details" | "confirmed";
+
+interface PublicUser {
+  id: string;
+  name: string;
+  role?: string;
+  email: string;
+  username: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  welcomeMessage?: string;
+  primaryColor: string;
+  primaryContainer: string;
+  eventTypes: EventType[];
+  availability: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+  appointments: Array<{ startTime: string; endTime: string; status: string }>;
+}
 
 export default function BookingPage({
   params,
 }: {
   params: Promise<{ username: string }>;
 }) {
-  use(params); // demo: resolves the async params
-  const user = MOCK_USER;
+  const { username } = use(params);
+  const [user, setUser] = useState<PublicUser | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
+  useEffect(() => {
+    fetch(`/api/users/${username}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setUser)
+      .catch(() => setLoadError(true));
+  }, [username]);
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-[var(--color-muted)]">
+        <p>Página não encontrada.</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[var(--ink-900)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return <BookingFlow user={user} />;
+}
+
+function BookingFlow({ user }: { user: PublicUser }) {
   const [step, setStep] = useState<Step>("event");
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -40,21 +69,58 @@ export default function BookingPage({
   const [guestEmail, setGuestEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
-  function handleConfirm() {
-    const activeIntegration = MOCK_CALENDAR_INTEGRATIONS.find((i) => i.isActive);
-    if (activeIntegration) {
-      setMeetingLink(generateMeetingLink(activeIntegration.provider));
+  const themeVars = useMemo(
+    () => getThemeStyleVars({ primaryColor: user.primaryColor, primaryContainer: user.primaryContainer }),
+    [user.primaryColor, user.primaryContainer]
+  );
+
+  async function handleConfirm() {
+    if (!selectedEvent || !selectedDate || !selectedTime) return;
+    setConfirming(true);
+    setBookingError(null);
+
+    const [h, m] = selectedTime.split(":").map(Number);
+    const startTime = new Date(selectedDate);
+    startTime.setHours(h, m, 0, 0);
+
+    try {
+      const res = await fetch("/api/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: user.username,
+          eventTypeId: selectedEvent.id,
+          startTime: startTime.toISOString(),
+          guestName,
+          guestEmail,
+          notes,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao confirmar");
+
+      setMeetingLink(data.meetingLink);
+      setStep("confirmed");
+    } catch (err) {
+      setBookingError(err instanceof Error ? err.message : "Erro ao agendar");
+    } finally {
+      setConfirming(false);
     }
-    setStep("confirmed");
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={themeVars as React.CSSProperties}>
       {/* Header */}
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="max-w-[1080px] mx-auto px-5 lg:px-8 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-xs text-[var(--color-muted)] hover:text-[var(--ink-900)] transition-colors">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-xs text-[var(--color-muted)] hover:text-[var(--ink-900)] transition-colors"
+          >
             <Icon name="chevron-left" size={14} />
             Voltar
           </Link>
@@ -80,7 +146,11 @@ export default function BookingPage({
                 <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden bg-[var(--color-surface-2)] border border-[var(--color-border)] shrink-0">
                   {user.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-[var(--color-muted)]">
                       <Icon name="user" size={18} />
@@ -121,7 +191,7 @@ export default function BookingPage({
           <div className="mt-8">
             {step === "event" && (
               <EventStep
-                events={MOCK_EVENT_TYPES.filter((e) => e.isActive)}
+                events={user.eventTypes.filter((e) => e.isActive)}
                 onSelect={(e) => {
                   setSelectedEvent(e);
                   setStep("datetime");
@@ -132,6 +202,7 @@ export default function BookingPage({
             {step === "datetime" && selectedEvent && (
               <DateTimeStep
                 event={selectedEvent}
+                appointments={user.appointments}
                 selectedDate={selectedDate}
                 selectedTime={selectedTime}
                 onPickDate={setSelectedDate}
@@ -156,6 +227,8 @@ export default function BookingPage({
                 onChangeNotes={setNotes}
                 onBack={() => setStep("datetime")}
                 onConfirm={handleConfirm}
+                confirming={confirming}
+                error={bookingError}
               />
             )}
 
@@ -257,14 +330,10 @@ function EventStep({
           </span>
           <div className="min-w-0">
             <p className="text-[16px] font-medium text-[var(--ink-900)]">{e.title}</p>
-            <p className="text-sm text-[var(--color-muted)] mt-0.5 line-clamp-2">
-              {e.description}
-            </p>
+            <p className="text-sm text-[var(--color-muted)] mt-0.5 line-clamp-2">{e.description}</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-[var(--color-muted-2)]">
-              {e.duration} min
-            </span>
+            <span className="font-mono text-xs text-[var(--color-muted-2)]">{e.duration} min</span>
             <Icon name="arrow-right" size={16} className="text-[var(--color-muted)]" />
           </div>
         </button>
@@ -276,6 +345,7 @@ function EventStep({
 /* ───────────────────────── Step 2 ───────────────────────── */
 function DateTimeStep({
   event,
+  appointments,
   selectedDate,
   selectedTime,
   onPickDate,
@@ -283,6 +353,7 @@ function DateTimeStep({
   onBack,
 }: {
   event: EventType;
+  appointments: Array<{ startTime: string | Date; endTime: string | Date; status: string }>;
   selectedDate: Date | null;
   selectedTime: string | null;
   onPickDate: (d: Date) => void;
@@ -298,8 +369,11 @@ function DateTimeStep({
 
   const days = useMemo(() => buildMonth(cursor), [cursor]);
   const slots = useMemo(
-    () => (selectedDate ? generateTimeSlots(selectedDate, event.duration) : []),
-    [selectedDate, event.duration]
+    () =>
+      selectedDate
+        ? generateTimeSlots(selectedDate, event.duration, appointments)
+        : [],
+    [selectedDate, event.duration, appointments]
   );
 
   return (
@@ -313,8 +387,7 @@ function DateTimeStep({
           <Icon name="chevron-left" size={14} /> Trocar tipo de reunião
         </button>
         <p className="text-xs text-[var(--color-muted)]">
-          <span className="font-medium text-[var(--ink-900)]">{event.title}</span> ·{" "}
-          {event.duration} min
+          <span className="font-medium text-[var(--ink-900)]">{event.title}</span> · {event.duration} min
         </p>
       </div>
 
@@ -330,7 +403,7 @@ function DateTimeStep({
                 type="button"
                 onClick={() => setMonthOffset((m) => m - 1)}
                 disabled={monthOffset === 0}
-                className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] disabled:opacity-30 transition-colors"
                 aria-label="Mês anterior"
               >
                 <Icon name="chevron-left" size={15} />
@@ -348,10 +421,7 @@ function DateTimeStep({
 
           <div className="grid grid-cols-7 gap-1 text-center">
             {["dom", "seg", "ter", "qua", "qui", "sex", "sáb"].map((d) => (
-              <div
-                key={d}
-                className="label text-[10px] py-2 text-[var(--color-muted-2)]"
-              >
+              <div key={d} className="label text-[10px] py-2 text-[var(--color-muted-2)]">
                 {d}
               </div>
             ))}
@@ -409,36 +479,31 @@ function DateTimeStep({
               Selecione um dia disponível no calendário ao lado.
             </p>
           )}
-
           {selectedDate && slots.length === 0 && (
             <p className="text-sm text-[var(--color-muted)] mt-4">
               Sem horários disponíveis neste dia.
             </p>
           )}
-
           {selectedDate && slots.length > 0 && (
             <div className="grid grid-cols-2 gap-1.5 max-h-[360px] overflow-y-auto pr-1">
-              {slots.map((t) => {
-                const isSelected = selectedTime === t;
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => onPickTime(t)}
-                    className={`
-                      h-10 text-sm font-medium font-mono tabular-nums
-                      rounded-[var(--radius-sm)] transition-colors
-                      ${
-                        isSelected
-                          ? "bg-[var(--ink-900)] text-white"
-                          : "border border-[var(--color-border)] text-[var(--ink-900)] hover:border-[var(--ink-900)] hover:bg-[var(--color-surface-2)]"
-                      }
-                    `}
-                  >
-                    {t}
-                  </button>
-                );
-              })}
+              {slots.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => onPickTime(t)}
+                  className={`
+                    h-10 text-sm font-medium font-mono tabular-nums
+                    rounded-[var(--radius-sm)] transition-colors
+                    ${
+                      selectedTime === t
+                        ? "bg-[var(--ink-900)] text-white"
+                        : "border border-[var(--color-border)] text-[var(--ink-900)] hover:border-[var(--ink-900)] hover:bg-[var(--color-surface-2)]"
+                    }
+                  `}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -470,6 +535,8 @@ function DetailsStep({
   onChangeNotes,
   onBack,
   onConfirm,
+  confirming,
+  error,
 }: {
   event: EventType;
   date: Date;
@@ -482,6 +549,8 @@ function DetailsStep({
   onChangeNotes: (v: string) => void;
   onBack: () => void;
   onConfirm: () => void;
+  confirming: boolean;
+  error: string | null;
 }) {
   const isValid = guestName.trim().length >= 2 && /\S+@\S+\.\S+/.test(guestEmail);
 
@@ -491,7 +560,7 @@ function DetailsStep({
         className="bg-[var(--color-surface)] p-6 space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
-          if (isValid) onConfirm();
+          if (isValid && !confirming) onConfirm();
         }}
       >
         <div>
@@ -537,17 +606,30 @@ function DetailsStep({
           />
         </BookField>
 
+        {error && (
+          <p className="text-[13px] text-[var(--color-danger)] flex items-center gap-1.5">
+            <Icon name="alert-circle" size={14} />
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          disabled={!isValid}
+          disabled={!isValid || confirming}
           className="w-full h-11 inline-flex items-center justify-center gap-2 text-sm font-medium rounded-[var(--radius)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: "var(--color-brand)",
-            color: "var(--color-brand-on)",
-          }}
+          style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
         >
-          Confirmar agendamento
-          <Icon name="arrow-right" size={15} />
+          {confirming ? (
+            <>
+              <Icon name="sync" size={15} className="animate-spin" />
+              Confirmando…
+            </>
+          ) : (
+            <>
+              Confirmar agendamento
+              <Icon name="arrow-right" size={15} />
+            </>
+          )}
         </button>
       </form>
 
@@ -626,16 +708,11 @@ function ConfirmedStep({
   guestName: string;
   meetingLink: string | null;
 }) {
-  const isTeams = meetingLink?.includes("teams.microsoft.com");
-
   return (
     <div className="text-center max-w-md mx-auto py-10 animate-fade-in">
       <div
         className="w-14 h-14 grid place-items-center rounded-full mx-auto mb-6"
-        style={{
-          background: "var(--color-brand)",
-          color: "var(--color-brand-on)",
-        }}
+        style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
       >
         <Icon name="check" size={22} strokeWidth={2.4} />
       </div>
@@ -643,11 +720,7 @@ function ConfirmedStep({
         Agendamento confirmado.
       </h2>
       <p className="text-sm text-[var(--color-muted)] leading-relaxed mb-6">
-        Obrigado, {guestName.split(" ")[0]}. Um convite com arquivo{" "}
-        <span className="font-mono text-[12px] bg-[var(--color-surface-2)] px-1.5 py-0.5 rounded">
-          .ics
-        </span>{" "}
-        foi enviado para o seu e-mail.
+        Obrigado, {guestName.split(" ")[0]}. Um convite foi enviado para o seu e-mail.
       </p>
 
       <div className="text-left bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-5 mb-4">
@@ -669,15 +742,17 @@ function ConfirmedStep({
               <Icon name="video" size={16} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-medium text-[var(--ink-900)]">
-                {isTeams ? "Reunião no Microsoft Teams" : "Reunião no Google Meet"}
-              </p>
+              <p className="text-[12px] font-medium text-[var(--ink-900)]">Entrar na reunião</p>
               <p className="text-[11px] text-[var(--color-muted)] font-mono truncate">
                 {meetingLink}
               </p>
             </div>
           </div>
-          <Icon name="external-link" size={14} className="text-[var(--color-muted)] shrink-0 group-hover:text-[var(--ink-900)] transition-colors" />
+          <Icon
+            name="external-link"
+            size={14}
+            className="text-[var(--color-muted)] shrink-0 group-hover:text-[var(--ink-900)] transition-colors"
+          />
         </a>
       )}
 
