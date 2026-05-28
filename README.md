@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cal.me
 
-## Getting Started
+Plataforma de agendamento corporativo **white-label**. Cada empresa parceira
+recebe uma página pública (`cal.me/<empresa>`) com a sua identidade visual:
+logo, banner, cor de destaque, mensagem de boas-vindas e tipos de evento.
 
-First, run the development server:
+## Pilares
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. **White-label completo** — identidade visual injetada via CSS custom
+   properties, sem rebuild por tenant.
+2. **Sincronização real** — Google Calendar e Microsoft 365 com bloqueio
+   bidirecional de conflitos.
+3. **Convites sem fricção** — anexo `.ics`, lembretes por e-mail e atalhos
+   para WhatsApp.
+
+## Stack
+
+- **Framework** — Next.js 16 (App Router, React 19)
+- **Estilo** — Tailwind CSS 4 + design tokens semânticos
+- **Tipografia** — IBM Plex Sans / Fraunces / IBM Plex Mono
+- **Ícones** — SVG inline (sem dependência de fontes externas)
+- **Persistência** — Prisma + PostgreSQL (schema em `prisma/schema.prisma`)
+
+## Estrutura
+
+```
+app/
+  (auth)            — painel administrativo (dashboard, settings, ...)
+  [username]/       — página pública de reserva do tenant
+components/
+  ui/Icon.tsx       — set de ícones inline
+  layout/           — AppShell, Sidebar, TopBar
+  dashboard/        — QuickStats, AppointmentList
+  settings/         — BrandingForm, AvailabilityForm
+lib/
+  theme.ts          — geração do CSS white-label
+  mock-data.ts      — dados de demonstração
+  types.ts          — tipos do domínio
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Desenvolvimento
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A aplicação sobe em `http://localhost:3000`. O painel está em `/dashboard`;
+a página pública de exemplo em `/claudio`.
 
-## Learn More
+## Deploy
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configurado para deploy contínuo na Vercel (`.vercel/` no `.gitignore`).

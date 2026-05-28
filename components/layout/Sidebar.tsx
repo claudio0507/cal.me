@@ -1,153 +1,137 @@
 "use client";
 
 /**
- * Cal.me — Sidebar Navigation
- * Navegação lateral inspirada no design de referência (Aetheric Precision)
+ * Cal.me — Sidebar
+ * Real client-side nav via Next Link + usePathname. Mobile drawer included.
  */
 
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 interface NavItem {
-  icon: string;
+  icon: IconName;
   label: string;
   href: string;
-  active?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { icon: "dashboard", label: "Dashboard", href: "/dashboard" },
-  { icon: "calendar_today", label: "Agenda", href: "/dashboard" },
-  { icon: "event_note", label: "Tipos de Evento", href: "/event-types" },
-  { icon: "schedule", label: "Disponibilidade", href: "/availability" },
+const PRIMARY_NAV: NavItem[] = [
+  { icon: "dashboard", label: "Painel", href: "/dashboard" },
+  { icon: "clock", label: "Disponibilidade", href: "/availability" },
   { icon: "palette", label: "Personalização", href: "/settings" },
   { icon: "sync", label: "Integrações", href: "/integrations" },
 ];
 
 interface SidebarProps {
-  activePage: string;
-  onNavigate: (page: string) => void;
+  open: boolean;
+  onClose: () => void;
 }
 
-export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({ open, onClose }: SidebarProps) {
+  const pathname = usePathname();
 
   return (
     <>
-      {/* Mobile overlay */}
-      <div className="fixed inset-0 bg-black/30 z-30 md:hidden hidden" />
+      {open && (
+        <div
+          className="fixed inset-0 bg-[var(--ink-900)]/40 z-30 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full z-40 hidden md:flex flex-col
-          ${collapsed ? "w-20" : "w-64"} 
-          bg-[var(--color-surface-container-lowest)] border-r border-[var(--color-surface-container-highest)]
-          transition-all duration-300 ease-in-out`}
+        className={`
+          fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40
+          w-64 flex flex-col
+          bg-[var(--color-surface)] border-r border-[var(--color-border)]
+          transition-transform duration-200 ease-out
+          ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          h-screen
+        `}
+        aria-label="Navegação principal"
       >
         {/* Logo */}
-        <div className={`p-6 flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
-            style={{ background: "var(--color-brand-light)" }}
-          >
-            <span
-              className="material-symbols-outlined text-xl"
-              style={{ color: "var(--color-brand-on-container)" }}
-            >
-              event_available
+        <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-8 h-8 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
+              <Icon name="logo" size={16} strokeWidth={1.8} />
             </span>
-          </div>
-          {!collapsed && (
-            <div className="animate-fade-in">
-              <h1
-                className="font-bold text-lg tracking-tight"
-                style={{ color: "var(--color-brand)" }}
-              >
-                Cal.me
-              </h1>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-secondary)]">
-                Enterprise Scheduling
-              </p>
-            </div>
-          )}
+            <span className="font-display text-[18px] leading-none tracking-tight text-[var(--ink-900)]">
+              Cal<span className="text-[var(--ink-400)]">.</span>me
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={onClose}
+            className="lg:hidden p-1.5 -mr-1.5 text-[var(--color-muted)] hover:text-[var(--ink-900)]"
+            aria-label="Fechar menu"
+          >
+            <Icon name="x" size={18} />
+          </button>
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="mx-4 mb-2 p-2 rounded-lg text-[var(--color-secondary)] hover:bg-[var(--color-surface-container-high)] transition-colors"
-          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-        >
-          <span className="material-symbols-outlined text-sm">
-            {collapsed ? "chevron_right" : "chevron_left"}
-          </span>
-        </button>
+        {/* Section: workspace */}
+        <div className="px-5 pt-5 pb-2">
+          <span className="label">Espaço de trabalho</span>
+        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-1 stagger">
-          {NAV_ITEMS.map((item) => {
-            const isActive = activePage === item.href;
+        <nav className="flex-1 px-3 stagger" aria-label="Seções principais">
+          {PRIMARY_NAV.map((item) => {
+            const isActive = pathname === item.href;
             return (
-              <button
+              <Link
                 key={item.href}
-                onClick={() => onNavigate(item.href)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all duration-200
-                  ${collapsed ? "justify-center" : ""}
+                href={item.href}
+                onClick={onClose}
+                className={`
+                  group flex items-center gap-3 h-10 px-3 rounded-[var(--radius)]
+                  text-sm font-medium
+                  transition-colors
                   ${
                     isActive
-                      ? "shadow-sm font-bold"
-                      : "text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-high)]"
-                  }`}
-                style={
-                  isActive
-                    ? {
-                        background: "var(--color-brand-light)",
-                        color: "var(--color-brand-on-container)",
-                      }
-                    : undefined
-                }
-                title={collapsed ? item.label : undefined}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={
-                    isActive
-                      ? { fontVariationSettings: "'FILL' 1" }
-                      : undefined
+                      ? "bg-[var(--ink-900)] text-white"
+                      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)]"
                   }
-                >
-                  {item.icon}
-                </span>
-                {!collapsed && <span>{item.label}</span>}
-              </button>
+                `}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon name={item.icon} size={17} strokeWidth={isActive ? 1.8 : 1.6} />
+                <span>{item.label}</span>
+                {isActive && (
+                  <span className="ml-auto w-1 h-1 rounded-full bg-white" />
+                )}
+              </Link>
             );
           })}
         </nav>
 
-        {/* Create Event CTA */}
-        <div className="px-3 pb-4">
-          <button
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm
-              transition-all duration-200 hover:brightness-105 active:scale-[0.97] shadow-sm
-              ${collapsed ? "px-3" : "px-4"}`}
-            style={{
-              background: "var(--color-brand-light)",
-              color: "var(--color-brand-on-container)",
-            }}
+        {/* CTA */}
+        <div className="px-3 pb-3">
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center gap-2 h-10 rounded-[var(--radius)] bg-[var(--ink-900)] hover:bg-[var(--ink-800)] text-white text-sm font-medium transition-colors"
           >
-            <span className="material-symbols-outlined">add</span>
-            {!collapsed && <span>Criar Evento</span>}
-          </button>
+            <Icon name="plus" size={15} strokeWidth={2} />
+            Novo evento
+          </Link>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[var(--color-surface-container-highest)] px-3 py-4 space-y-1">
-          <button className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-high)] transition-colors ${collapsed ? "justify-center" : ""}`}>
-            <span className="material-symbols-outlined">help</span>
-            {!collapsed && <span>Ajuda</span>}
+        <div className="border-t border-[var(--color-border)] px-3 py-3 space-y-0.5">
+          <button
+            type="button"
+            className="flex items-center gap-3 w-full h-9 px-3 rounded-[var(--radius)] text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] transition-colors"
+          >
+            <Icon name="help" size={16} />
+            <span>Ajuda</span>
           </button>
-          <button className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-high)] transition-colors ${collapsed ? "justify-center" : ""}`}>
-            <span className="material-symbols-outlined">logout</span>
-            {!collapsed && <span>Sair</span>}
+          <button
+            type="button"
+            className="flex items-center gap-3 w-full h-9 px-3 rounded-[var(--radius)] text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] transition-colors"
+          >
+            <Icon name="logout" size={16} />
+            <span>Sair</span>
           </button>
         </div>
       </aside>

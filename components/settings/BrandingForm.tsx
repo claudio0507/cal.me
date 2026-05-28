@@ -2,23 +2,24 @@
 
 /**
  * Cal.me — BrandingForm
- * Formulário de parametrização White-Label com preview ao vivo
- * - Upload de avatar e banner
- * - ColorPicker com paletas pré-definidas
- * - Texto de boas-vindas customizável
+ * White-label customization: avatar, banner, brand color, welcome copy.
+ * Live preview reflects all changes against tenant theme.
  */
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { MOCK_USER, MOCK_EVENT_TYPES } from "@/lib/mock-data";
-import { PRESET_PALETTES } from "@/lib/theme";
+import { PRESET_PALETTES, readableOn } from "@/lib/theme";
+import { Icon } from "@/components/ui/Icon";
+
+const MAX_WELCOME = 240;
 
 export default function BrandingForm() {
   const [name, setName] = useState(MOCK_USER.name);
-  const [welcomeMessage, setWelcomeMessage] = useState(MOCK_USER.welcomeMessage || "");
+  const [welcomeMessage, setWelcomeMessage] = useState(MOCK_USER.welcomeMessage ?? "");
   const [primaryColor, setPrimaryColor] = useState(MOCK_USER.primaryColor);
   const [primaryContainer, setPrimaryContainer] = useState(MOCK_USER.primaryContainer);
-  const [avatarPreview, setAvatarPreview] = useState(MOCK_USER.avatarUrl || "");
-  const [bannerPreview, setBannerPreview] = useState(MOCK_USER.bannerUrl || "");
+  const [avatarPreview, setAvatarPreview] = useState(MOCK_USER.avatarUrl ?? "");
+  const [bannerPreview, setBannerPreview] = useState(MOCK_USER.bannerUrl ?? "");
   const [saved, setSaved] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -29,296 +30,362 @@ export default function BrandingForm() {
     setPreview: (url: string) => void
   ) {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
   }
 
   function handleSave() {
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setTimeout(() => setSaved(false), 2200);
   }
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
       {/* Form */}
-      <div className="space-y-8 animate-fade-in">
-        {/* Avatar & Banner */}
-        <section className="p-6 rounded-2xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container-lowest)]">
-          <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined" style={{ color: "var(--color-brand)" }}>image</span>
-            Identidade Visual
-          </h2>
+      <div className="space-y-6 animate-fade-in min-w-0">
+        {/* ─── Identity ─── */}
+        <FormSection title="Identidade visual" caption="Logotipo e banner exibidos na página de reserva.">
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
+            <div>
+              <span className="label block mb-2">Logo</span>
+              <div className="relative">
+                <div className="w-24 h-24 rounded-[var(--radius)] overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
+                  {avatarPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarPreview}
+                      alt="Logo"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-[var(--color-muted-2)]">
+                      <Icon name="image" size={26} />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 grid place-items-center rounded-full bg-[var(--ink-900)] text-white border-2 border-[var(--color-surface)] hover:bg-[var(--ink-800)] transition-colors"
+                  aria-label="Alterar logo"
+                >
+                  <Icon name="upload" size={13} strokeWidth={2} />
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={(e) => handleImageUpload(e, setAvatarPreview)}
+                />
+              </div>
+              <p className="mt-3 text-xs text-[var(--color-muted-2)]">
+                PNG, JPG ou WebP · até 2 MB
+              </p>
+            </div>
 
-          {/* Avatar */}
-          <div className="flex items-center gap-6 mb-6">
-            <div className="relative group">
-              <div
-                className="w-20 h-20 rounded-2xl overflow-hidden border-2 bg-[var(--color-surface-container)]"
-                style={{ borderColor: primaryContainer }}
+            <div className="min-w-0">
+              <span className="label block mb-2">Banner</span>
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                className="relative w-full h-32 rounded-[var(--radius)] overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-surface-2)] group"
+                aria-label="Carregar banner"
               >
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                {bannerPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={bannerPreview}
+                    alt="Banner"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="material-symbols-outlined text-3xl text-[var(--color-secondary)]">person</span>
+                  <div className="grid-bg w-full h-full grid place-items-center text-[var(--color-muted)]">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Icon name="upload" size={16} />
+                      Carregar imagem
+                    </span>
                   </div>
                 )}
-              </div>
-              <button
-                onClick={() => avatarInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-110"
-                style={{ background: primaryContainer, color: primaryColor }}
-              >
-                <span className="material-symbols-outlined text-sm">edit</span>
+                <span className="absolute inset-0 bg-[var(--ink-900)]/0 group-hover:bg-[var(--ink-900)]/5 transition-colors" />
               </button>
               <input
-                ref={avatarInputRef}
+                ref={bannerInputRef}
                 type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleImageUpload(e, setAvatarPreview)}
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={(e) => handleImageUpload(e, setBannerPreview)}
               />
-            </div>
-            <div>
-              <p className="font-semibold text-sm">Foto de Perfil</p>
-              <p className="text-xs text-[var(--color-secondary)]">JPG, PNG ou WebP. Máx 2MB.</p>
+              <p className="mt-3 text-xs text-[var(--color-muted-2)]">
+                Proporção ideal 3:1 · 1600 × 540 px
+              </p>
             </div>
           </div>
+        </FormSection>
 
-          {/* Banner */}
-          <div>
-            <p className="font-semibold text-sm mb-2">Banner / Cabeçalho</p>
-            <div
-              className="relative h-32 rounded-xl overflow-hidden border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container)] group cursor-pointer"
-              onClick={() => bannerInputRef.current?.click()}
-            >
-              {bannerPreview ? (
-                <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[var(--color-secondary)]">
-                  <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
-                  <p className="text-xs">Clique para enviar um banner</p>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl">
-                  upload
-                </span>
-              </div>
-            </div>
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleImageUpload(e, setBannerPreview)}
+        {/* ─── Brand color ─── */}
+        <FormSection
+          title="Cor de destaque"
+          caption="Aplicada apenas à página pública. O painel administrativo permanece neutro."
+        >
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-5">
+            {PRESET_PALETTES.map((palette) => {
+              const isActive = primaryColor.toLowerCase() === palette.primary.toLowerCase();
+              return (
+                <button
+                  key={palette.name}
+                  type="button"
+                  onClick={() => {
+                    setPrimaryColor(palette.primary);
+                    setPrimaryContainer(palette.container);
+                  }}
+                  title={palette.name}
+                  aria-label={`Paleta ${palette.name}`}
+                  aria-pressed={isActive}
+                  className={`
+                    relative aspect-square w-full rounded-[var(--radius)]
+                    border transition-all
+                    ${
+                      isActive
+                        ? "border-[var(--ink-900)] ring-2 ring-[var(--ink-900)] ring-offset-2 ring-offset-[var(--color-surface)]"
+                        : "border-[var(--color-border-strong)] hover:border-[var(--ink-700)]"
+                    }
+                  `}
+                  style={{ background: palette.primary }}
+                >
+                  {isActive && (
+                    <Icon
+                      name="check"
+                      size={16}
+                      strokeWidth={2.4}
+                      className="absolute inset-0 m-auto"
+                      style={{ color: readableOn(palette.primary) }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorField
+              label="Principal"
+              value={primaryColor}
+              onChange={setPrimaryColor}
+            />
+            <ColorField
+              label="Container claro"
+              value={primaryContainer}
+              onChange={setPrimaryContainer}
             />
           </div>
-        </section>
+        </FormSection>
 
-        {/* Color Picker */}
-        <section className="p-6 rounded-2xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container-lowest)]">
-          <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined" style={{ color: "var(--color-brand)" }}>palette</span>
-            Cor de Destaque
-          </h2>
-
-          {/* Preset palettes */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-6">
-            {PRESET_PALETTES.map((palette) => (
-              <button
-                key={palette.name}
-                onClick={() => {
-                  setPrimaryColor(palette.primary);
-                  setPrimaryContainer(palette.container);
-                }}
-                className={`group relative w-full aspect-square rounded-xl border-2 transition-all duration-200 hover:scale-110 ${
-                  primaryColor === palette.primary
-                    ? "border-[var(--color-on-bg)] shadow-lg scale-110"
-                    : "border-transparent"
-                }`}
-                style={{ background: palette.container }}
-                title={palette.name}
-              >
-                <div
-                  className="absolute inset-2 rounded-lg"
-                  style={{ background: palette.primary }}
-                />
-                {primaryColor === palette.primary && (
-                  <span className="absolute inset-0 flex items-center justify-center text-white text-sm material-symbols-outlined drop-shadow">
-                    check
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Custom color */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-[var(--color-secondary)]">Principal:</label>
-              <div className="relative">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
-                />
-              </div>
-              <code className="text-xs bg-[var(--color-surface-container)] px-2 py-1 rounded font-mono">
-                {primaryColor}
-              </code>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-semibold text-[var(--color-secondary)]">Container:</label>
-              <div className="relative">
-                <input
-                  type="color"
-                  value={primaryContainer}
-                  onChange={(e) => setPrimaryContainer(e.target.value)}
-                  className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
-                />
-              </div>
-              <code className="text-xs bg-[var(--color-surface-container)] px-2 py-1 rounded font-mono">
-                {primaryContainer}
-              </code>
-            </div>
-          </div>
-        </section>
-
-        {/* Welcome Text */}
-        <section className="p-6 rounded-2xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container-lowest)]">
-          <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined" style={{ color: "var(--color-brand)" }}>edit_note</span>
-            Cultura Textual
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-[var(--color-secondary)] block mb-1.5">
-                Nome exibido
-              </label>
+        {/* ─── Copy ─── */}
+        <FormSection title="Textos" caption="Aparecem no cabeçalho da página pública.">
+          <div className="space-y-5">
+            <Field label="Nome exibido" hint="Pode ser o nome da empresa ou do profissional.">
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container)] focus:ring-2 outline-none text-sm transition-all"
-                style={{ "--tw-ring-color": primaryContainer } as React.CSSProperties}
+                maxLength={80}
+                className="
+                  w-full h-10 px-3 text-sm
+                  bg-[var(--color-surface)] border border-[var(--color-border-strong)]
+                  rounded-[var(--radius-sm)] text-[var(--ink-900)]
+                  outline-none focus:border-[var(--ink-900)]
+                "
               />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-[var(--color-secondary)] block mb-1.5">
-                Mensagem de boas-vindas
-              </label>
+            </Field>
+
+            <Field
+              label="Mensagem de boas-vindas"
+              hint={`${welcomeMessage.length} / ${MAX_WELCOME} caracteres`}
+            >
               <textarea
                 value={welcomeMessage}
-                onChange={(e) => setWelcomeMessage(e.target.value)}
+                onChange={(e) => setWelcomeMessage(e.target.value.slice(0, MAX_WELCOME))}
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container)] focus:ring-2 outline-none text-sm resize-none transition-all"
-                style={{ "--tw-ring-color": primaryContainer } as React.CSSProperties}
-                placeholder="Ex: Agende uma consultoria técnica com nosso time"
+                placeholder="Ex.: Agende uma reunião com a nossa equipe técnica."
+                className="
+                  w-full px-3 py-2.5 text-sm leading-relaxed
+                  bg-[var(--color-surface)] border border-[var(--color-border-strong)]
+                  rounded-[var(--radius-sm)] text-[var(--ink-900)] resize-none
+                  outline-none focus:border-[var(--ink-900)]
+                "
               />
-              <p className="text-xs text-[var(--color-secondary)] mt-1">
-                {welcomeMessage.length}/200 caracteres
-              </p>
-            </div>
+            </Field>
           </div>
-        </section>
+        </FormSection>
 
-        {/* Save */}
-        <button
-          onClick={handleSave}
-          className="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-105 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
-          style={{
-            background: primaryContainer,
-            color: primaryColor,
-          }}
-        >
-          {saved ? (
-            <>
-              <span className="material-symbols-outlined text-lg">check_circle</span>
-              Salvo com sucesso!
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-lg">save</span>
-              Salvar Configurações
-            </>
-          )}
-        </button>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <p className="text-xs text-[var(--color-muted)]">
+            As alterações entram em vigor imediatamente após salvar.
+          </p>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
+          >
+            <Icon name={saved ? "check" : "save"} size={15} strokeWidth={2} />
+            {saved ? "Configurações salvas" : "Salvar configurações"}
+          </button>
+        </div>
       </div>
 
-      {/* Live Preview */}
-      <div className="hidden xl:block sticky top-24 h-fit">
-        <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-secondary)] mb-3 flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">visibility</span>
-          Preview ao vivo
-        </p>
+      {/* ─── Live preview ─── */}
+      <aside className="hidden xl:block sticky top-24 self-start">
+        <div className="flex items-center justify-between mb-3">
+          <span className="label">Preview em tempo real</span>
+          <span className="font-mono text-[11px] text-[var(--color-muted-2)]">
+            cal.me/{MOCK_USER.username}
+          </span>
+        </div>
         <div
-          className="rounded-2xl border border-[var(--color-surface-container-highest)] overflow-hidden shadow-xl bg-[var(--color-surface-container-lowest)] animate-scale-in"
-          style={{
-            "--color-brand": primaryColor,
-            "--color-brand-light": primaryContainer,
-          } as React.CSSProperties}
+          className="rounded-[var(--radius-lg)] border border-[var(--color-border-strong)] overflow-hidden bg-[var(--color-surface)] animate-scale-in"
+          style={
+            {
+              "--preview-brand": primaryColor,
+              "--preview-brand-soft": primaryContainer,
+              "--preview-brand-on": readableOn(primaryColor),
+            } as React.CSSProperties
+          }
         >
-          {/* Banner preview */}
           <div
             className="h-24 relative"
             style={{
               background: bannerPreview
-                ? `url(${bannerPreview}) center/cover`
-                : `linear-gradient(135deg, ${primaryColor}, ${primaryContainer})`,
+                ? `url(${bannerPreview}) center / cover no-repeat`
+                : `var(--preview-brand)`,
             }}
           >
-            <div className="absolute -bottom-6 left-6">
-              <div
-                className="w-14 h-14 rounded-xl border-3 bg-[var(--color-surface-container)] overflow-hidden shadow-md"
-                style={{ borderColor: primaryContainer }}
-              >
+            <div className="absolute -bottom-7 left-5">
+              <div className="w-14 h-14 rounded-[var(--radius)] overflow-hidden border-2 border-[var(--color-surface)] bg-[var(--color-surface-2)]">
                 {avatarPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="material-symbols-outlined text-xl text-[var(--color-secondary)]">person</span>
+                  <div className="w-full h-full grid place-items-center text-[var(--color-muted-2)]">
+                    <Icon name="user" size={20} />
                   </div>
                 )}
               </div>
             </div>
           </div>
-
-          <div className="pt-10 px-6 pb-6">
-            <p className="text-[10px] uppercase tracking-widest text-[var(--color-secondary)]">Consultor</p>
-            <h3 className="font-bold text-base mb-2">{name || "Seu nome"}</h3>
-            <p className="text-xs text-[var(--color-secondary)] mb-4 leading-relaxed">
-              {welcomeMessage || "Sua mensagem de boas-vindas aparecerá aqui..."}
+          <div className="pt-10 px-5 pb-5">
+            <span className="label text-[9px]">Reserve um horário com</span>
+            <h3 className="font-display text-[18px] leading-tight tracking-tight text-[var(--ink-900)] mt-1">
+              {name || "Sua empresa"}
+            </h3>
+            <p className="text-[12px] text-[var(--color-muted)] mt-1 leading-relaxed">
+              {welcomeMessage || "A mensagem aparece aqui."}
             </p>
 
-            {/* Mini event types */}
-            <div className="space-y-2">
+            <div className="mt-4 space-y-1.5">
               {MOCK_EVENT_TYPES.slice(0, 2).map((evt) => (
                 <div
                   key={evt.id}
-                  className="flex items-center justify-between p-3 rounded-xl border"
-                  style={{ borderColor: primaryContainer }}
+                  className="flex items-center justify-between gap-3 px-3 py-2.5 border border-[var(--color-border)] rounded-[var(--radius-sm)]"
                 >
-                  <div>
-                    <p className="text-xs font-bold">{evt.title}</p>
-                    <p className="text-[10px] text-[var(--color-secondary)]">{evt.duration} min</p>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-medium text-[var(--ink-900)] truncate">
+                      {evt.title}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-muted)] font-mono">
+                      {evt.duration} min
+                    </p>
                   </div>
-                  <button
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ background: primaryContainer, color: primaryColor }}
+                  <span
+                    className="text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-sm"
+                    style={{
+                      background: "var(--preview-brand)",
+                      color: "var(--preview-brand-on)",
+                    }}
                   >
-                    Agendar
-                  </button>
+                    Reservar
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </div>
+      </aside>
+    </div>
+  );
+}
+
+function FormSection({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)]">
+      <header className="px-5 py-4 border-b border-[var(--color-border)]">
+        <h2 className="text-[15px] font-medium text-[var(--ink-900)]">{title}</h2>
+        {caption && <p className="text-xs text-[var(--color-muted)] mt-0.5">{caption}</p>}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[12px] font-medium text-[var(--ink-800)]">{label}</span>
+        {hint && <span className="text-[11px] text-[var(--color-muted-2)] font-mono">{hint}</span>}
+      </div>
+      {children}
+    </label>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <span className="text-[12px] font-medium text-[var(--ink-800)] block mb-1.5">
+        {label}
+      </span>
+      <div className="flex items-center gap-2 h-10 px-2 bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)]">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={label}
+          className="w-7 h-7 rounded-[var(--radius-sm)] cursor-pointer border-0 p-0 bg-transparent"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          maxLength={7}
+          className="flex-1 bg-transparent text-sm font-mono outline-none text-[var(--ink-900)]"
+        />
       </div>
     </div>
   );

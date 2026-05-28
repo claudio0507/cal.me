@@ -2,24 +2,24 @@
 
 /**
  * Cal.me — AvailabilityForm
- * Grade semanal interativa para configuração de dias e horários ativos
+ * Weekly grid for configuring active days + time windows.
  */
 
 import { useState } from "react";
 import { MOCK_AVAILABILITY } from "@/lib/mock-data";
 import type { Availability } from "@/lib/types";
+import { Icon } from "@/components/ui/Icon";
 
 const WEEK_DAYS = [
-  "Domingo",
-  "Segunda-feira",
-  "Terça-feira",
-  "Quarta-feira",
-  "Quinta-feira",
-  "Sexta-feira",
-  "Sábado",
+  { full: "Domingo", short: "Dom" },
+  { full: "Segunda-feira", short: "Seg" },
+  { full: "Terça-feira", short: "Ter" },
+  { full: "Quarta-feira", short: "Qua" },
+  { full: "Quinta-feira", short: "Qui" },
+  { full: "Sexta-feira", short: "Sex" },
+  { full: "Sábado", short: "Sáb" },
 ];
 
-// Gera opções de horário de 30 em 30 minutos
 const TIME_OPTIONS: string[] = [];
 for (let h = 0; h < 24; h++) {
   const hh = h.toString().padStart(2, "0");
@@ -34,9 +34,9 @@ export default function AvailabilityForm() {
         id: match?.id || `new_${index}`,
         userId: "usr_001",
         dayOfWeek: index,
-        startTime: match?.startTime || "09:00",
-        endTime: match?.endTime || "18:00",
-        isActive: match ? match.isActive : index !== 0 && index !== 6, // desativa final de semana por padrão
+        startTime: match?.startTime ?? "09:00",
+        endTime: match?.endTime ?? "18:00",
+        isActive: match ? match.isActive : index !== 0 && index !== 6,
       };
     })
   );
@@ -61,120 +61,157 @@ export default function AvailabilityForm() {
 
   function handleSave() {
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 2200);
   }
 
   return (
-    <div className="max-w-4xl space-y-6 animate-fade-in">
-      <div className="p-6 rounded-2xl border border-[var(--color-surface-container-highest)] bg-[var(--color-surface-container-lowest)] shadow-sm">
-        <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
-          <span className="material-symbols-outlined" style={{ color: "var(--color-brand)" }}>
-            calendar_clock
-          </span>
-          Janela de Atendimento Padrão
-        </h2>
+    <div className="max-w-3xl space-y-6 animate-fade-in">
+      <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
+        <header className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
+          <div>
+            <h2 className="text-[15px] font-medium text-[var(--ink-900)]">
+              Janela de atendimento semanal
+            </h2>
+            <p className="text-xs text-[var(--color-muted)] mt-0.5">
+              Horários no fuso de São Paulo (UTC−3).
+            </p>
+          </div>
+          <Icon name="clock" size={18} className="text-[var(--color-muted-2)]" />
+        </header>
 
-        <div className="space-y-4">
-          {WEEK_DAYS.map((dayName, index) => {
-            const dayConfig = availabilities.find((a) => a.dayOfWeek === index)!;
-
+        <ul role="list" className="divide-y divide-[var(--color-border)]">
+          {WEEK_DAYS.map((day, index) => {
+            const cfg = availabilities.find((a) => a.dayOfWeek === index)!;
             return (
-              <div
-                key={dayName}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all duration-300 gap-4
-                  ${
-                    dayConfig.isActive
-                      ? "border-[var(--color-brand-light)] bg-[var(--color-surface-container-low)]"
-                      : "border-[var(--color-surface-container-highest)] bg-transparent opacity-60"
-                  }`}
+              <li
+                key={day.full}
+                className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-3 md:gap-5 items-center px-5 py-4"
               >
-                {/* Day Switcher */}
-                <div className="flex items-center gap-3 min-w-[180px]">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={dayConfig.isActive}
-                      onChange={() => toggleDay(index)}
-                      className="sr-only peer"
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <ToggleSwitch
+                    checked={cfg.isActive}
+                    onChange={() => toggleDay(index)}
+                    aria-label={`${cfg.isActive ? "Desativar" : "Ativar"} ${day.full}`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      cfg.isActive ? "text-[var(--ink-900)]" : "text-[var(--color-muted-2)]"
+                    }`}
+                  >
+                    {day.full}
+                  </span>
+                </label>
+
+                {cfg.isActive ? (
+                  <div className="flex items-center gap-3">
+                    <TimeSelect
+                      value={cfg.startTime}
+                      onChange={(v) => updateTime(index, "startTime", v)}
+                      label={`Início ${day.full}`}
                     />
-                    <div className="w-11 h-6 bg-[var(--color-surface-container-highest)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-brand)]"></div>
-                  </label>
-                  <span className="font-bold text-sm">{dayName}</span>
-                </div>
-
-                {/* Time Range Selector */}
-                {dayConfig.isActive ? (
-                  <div className="flex items-center gap-3 animate-fade-in">
-                    <div className="relative">
-                      <select
-                        value={dayConfig.startTime}
-                        onChange={(e) => updateTime(index, "startTime", e.target.value)}
-                        className="appearance-none bg-[var(--color-surface-container-lowest)] border border-[var(--color-surface-container-highest)] rounded-xl pl-4 pr-10 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-[var(--color-brand-light)] outline-none cursor-pointer"
-                      >
-                        {TIME_OPTIONS.map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-secondary)] pointer-events-none">
-                        keyboard_arrow_down
-                      </span>
-                    </div>
-
-                    <span className="text-[var(--color-secondary)] font-medium">às</span>
-
-                    <div className="relative">
-                      <select
-                        value={dayConfig.endTime}
-                        onChange={(e) => updateTime(index, "endTime", e.target.value)}
-                        className="appearance-none bg-[var(--color-surface-container-lowest)] border border-[var(--color-surface-container-highest)] rounded-xl pl-4 pr-10 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-[var(--color-brand-light)] outline-none cursor-pointer"
-                      >
-                        {TIME_OPTIONS.map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-secondary)] pointer-events-none">
-                        keyboard_arrow_down
-                      </span>
-                    </div>
+                    <span className="text-xs text-[var(--color-muted-2)] uppercase tracking-widest">
+                      até
+                    </span>
+                    <TimeSelect
+                      value={cfg.endTime}
+                      onChange={(v) => updateTime(index, "endTime", v)}
+                      label={`Fim ${day.full}`}
+                    />
                   </div>
                 ) : (
-                  <span className="text-xs font-semibold text-[var(--color-secondary)] uppercase tracking-wider italic sm:pr-8 py-2">
-                    Indisponível / Fechado
+                  <span className="text-xs text-[var(--color-muted-2)] uppercase tracking-widest">
+                    Fechado
                   </span>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
-      </div>
+        </ul>
+      </section>
 
-      {/* Action Footer */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-[var(--color-muted)]">
+          As alterações afetam apenas novos agendamentos.
+        </p>
         <button
+          type="button"
           onClick={handleSave}
-          className="px-8 py-3.5 rounded-xl font-bold text-sm shadow-sm transition-all duration-200 hover:brightness-105 active:scale-[0.98] flex items-center gap-2"
-          style={{
-            background: "var(--color-brand-light)",
-            color: "var(--color-brand-on-container)",
-          }}
+          className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
         >
-          {saved ? (
-            <>
-              <span className="material-symbols-outlined text-sm">check</span>
-              Salvo!
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-sm">save</span>
-              Salvar Horários
-            </>
-          )}
+          <Icon name={saved ? "check" : "save"} size={15} strokeWidth={2} />
+          {saved ? "Salvo" : "Salvar alterações"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+  ...rest
+}: {
+  checked: boolean;
+  onChange: () => void;
+} & React.AriaAttributes) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`
+        relative w-9 h-5 rounded-full transition-colors duration-150
+        ${checked ? "bg-[var(--ink-900)]" : "bg-[var(--color-surface-3)]"}
+      `}
+      {...rest}
+    >
+      <span
+        className={`
+          absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm
+          transition-transform duration-150
+          ${checked ? "translate-x-4" : "translate-x-0"}
+        `}
+      />
+    </button>
+  );
+}
+
+function TimeSelect({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className="
+          appearance-none font-mono text-sm tabular-nums
+          h-9 pl-3 pr-8 bg-[var(--color-surface)]
+          border border-[var(--color-border-strong)] rounded-[var(--radius-sm)]
+          text-[var(--ink-900)]
+          outline-none focus:border-[var(--ink-900)]
+          transition-colors cursor-pointer
+        "
+      >
+        {TIME_OPTIONS.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+      <Icon
+        name="chevron-down"
+        size={14}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-muted-2)] pointer-events-none"
+      />
     </div>
   );
 }

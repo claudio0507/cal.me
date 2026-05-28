@@ -12,9 +12,10 @@ export const MOCK_USER: User = {
   username: "claudio",
   avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face",
   bannerUrl: undefined,
-  welcomeMessage: "Agende uma consultoria técnica com nosso time de especialistas",
-  primaryColor: "#506600",
-  primaryContainer: "#ccff00",
+  welcomeMessage:
+    "Agende uma reunião com a nossa equipe. Atendimento corporativo, sem fricção.",
+  primaryColor: "#0a0a09",
+  primaryContainer: "#f4f4f3",
 };
 
 export const MOCK_EVENT_TYPES: EventType[] = [
