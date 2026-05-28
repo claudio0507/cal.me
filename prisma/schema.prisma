@@ -1,0 +1,120 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Tenant = empresa/usuário que usa a plataforma Cal.me
+model User {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  username         String    @unique   // slug público da booking page: cal.me/username
+  hashedPassword   String?
+  avatarUrl        String?
+  bannerUrl        String?
+
+  // White-Label / Parametrização
+  welcomeMessage   String?             // texto customizado da tela inicial
+  primaryColor     String   @default("#506600")        // cor de destaque HEX
+  primaryContainer String   @default("#ccff00")        // versão clara (container/hover)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  availability     Availability[]
+  appointments     Appointment[]
+  integrations     CalendarIntegration[]
+  eventTypes       EventType[]
+}
+
+// Tipo de Evento (ex: "Consulta 30min", "Demo de Produto")
+model EventType {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  duration     Int      // em minutos
+  slug         String   // slug do evento: cal.me/username/slug
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@unique([userId, slug])
+}
+
+// Janelas de disponibilidade semanais por dia
+model Availability {
+  id        String   @id @default(cuid())
+  userId    String
+  dayOfWeek Int      // 0 = Domingo, 1 = Segunda ... 6 = Sábado
+  startTime String   // formato "HH:MM" (ex: "09:00")
+  endTime   String   // formato "HH:MM" (ex: "18:00")
+  isActive  Boolean  @default(true)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Agendamento confirmado com convidado
+model Appointment {
+  id           String            @id @default(cuid())
+  userId       String            // Dono da agenda
+  eventTypeId  String
+  title        String
+  guestName    String
+  guestEmail   String
+  startTime    DateTime
+  endTime      DateTime
+  status       AppointmentStatus @default(PENDING)
+  channel      Channel           @default(VIDEO)
+  notes        String?
+  cancelReason String?
+  icsToken     String?           @unique  // token único para o link de convite .ics
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType    EventType         @relation(fields: [eventTypeId], references: [id])
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED
+  COMPLETED
+}
+
+enum Channel {
+  VIDEO
+  PHONE
+  IN_PERSON
+  WHATSAPP
+}
+
+// Integrações de Calendário Externo (Google / Outlook)
+model CalendarIntegration {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     Provider
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  calendarId   String?  // ID do calendário selecionado para sincronizar
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+enum Provider {
+  GOOGLE
+  MICROSOFT
+}

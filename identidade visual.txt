@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aetheric Precision | Agendamento</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#f6faff",
+                      "on-tertiary-container": "#5b6d7a",
+                      "on-tertiary-fixed-variant": "#374956",
+                      "on-error-container": "#93000a",
+                      "primary": "#506600",
+                      "on-background": "#141d23",
+                      "surface-container-highest": "#dbe4ed",
+                      "inverse-surface": "#293138",
+                      "tertiary-container": "#dcefff",
+                      "inverse-primary": "#abd600",
+                      "on-error": "#ffffff",
+                      "inverse-on-surface": "#e9f2fb",
+                      "surface-container": "#e6eff8",
+                      "surface": "#f6faff",
+                      "secondary-fixed": "#e5e2e1",
+                      "on-primary-container": "#5b7300",
+                      "primary-container": "#ccff00",
+                      "secondary": "#5f5e5e",
+                      "surface-variant": "#dbe4ed",
+                      "primary-fixed": "#c3f400",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-tint": "#506600",
+                      "secondary-container": "#e5e2e1",
+                      "primary-fixed-dim": "#abd600",
+                      "on-secondary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#f6faff",
+                      "outline-variant": "#c4c9ac",
+                      "on-surface-variant": "#444933",
+                      "tertiary-fixed": "#d2e5f5",
+                      "on-secondary-container": "#656464",
+                      "on-secondary-fixed-variant": "#474646",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#d2dbe4",
+                      "on-surface": "#141d23",
+                      "tertiary": "#4f616e",
+                      "on-tertiary-fixed": "#0b1d29",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed-variant": "#3c4d00",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "surface-container-high": "#e0e9f2",
+                      "outline": "#747a60",
+                      "secondary-fixed-dim": "#c8c6c5",
+                      "on-primary-fixed": "#161e00",
+                      "tertiary-fixed-dim": "#b6c9d8",
+                      "surface-container-low": "#ecf5fe",
+                      "error": "#ba1a1a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-desktop": "64px",
+                      "container-max": "1440px",
+                      "gutter": "24px",
+                      "margin-mobile": "20px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Montserrat"],
+                      "headline-lg-mobile": ["Montserrat"],
+                      "code-snippet": ["monospace"],
+                      "body-lg": ["Montserrat"],
+                      "display-lg": ["Montserrat"],
+                      "headline-md": ["Montserrat"],
+                      "body-md": ["Montserrat"],
+                      "label-caps": ["Montserrat"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "code-snippet": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dbe4ed; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #c4c9ac; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full z-40 p-4 hidden md:flex h-screen w-64 flex flex-col bg-surface border-r border-surface-container-highest transition-all duration-200 ease-in-out">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-primary-container">account_tree</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Aetheric</h1>
+<p class="font-label-caps text-[10px] uppercase tracking-widest text-on-surface-variant">Precision Scheduling</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </div>
+<div class="text-on-primary-container bg-primary-container rounded-lg font-bold p-3 flex items-center gap-3 cursor-pointer font-label-caps text-label-caps active-tab">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+                Calendar
+            </div>
+<div class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">groups</span>
+                Team
+            </div>
+<div class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">account_tree</span>
+                Projects
+            </div>
+<div class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">insights</span>
+                Analytics
+            </div>
+</nav>
+<button class="mb-6 w-full bg-primary-container text-on-primary-container font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-transform active:scale-95">
+<span class="material-symbols-outlined">add</span>
+            Create Event
+        </button>
+<div class="pt-4 border-t border-surface-container-highest space-y-1">
+<div class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">help</span>
+                Help
+            </div>
+<div class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all p-3 flex items-center gap-3 rounded-lg cursor-pointer font-label-caps text-label-caps">
+<span class="material-symbols-outlined">logout</span>
+                Logout
+            </div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:pl-64 min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center px-margin-desktop w-full h-16 bg-background border-b border-surface-container-highest z-30">
+<div class="flex items-center gap-4">
+<span class="md:hidden material-symbols-outlined cursor-pointer">menu</span>
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-secondary text-lg">search</span>
+<input class="bg-surface-container border-none rounded-full pl-10 pr-4 py-1.5 text-body-md focus:ring-2 focus:ring-primary-container w-64 outline-none" placeholder="Quick Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:text-primary transition-colors">settings</span>
+</div>
+<div class="flex items-center gap-3 border-l border-surface-container-highest pl-6">
+<div class="text-right hidden lg:block">
+<p class="font-bold text-body-md leading-none">Cláudio Fernandes</p>
+<p class="text-[10px] text-secondary font-label-caps">Senior Analyst</p>
+</div>
+<img alt="User profile" class="w-9 h-9 rounded-full border border-surface-container-highest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIn6TLL27Da92jlhkBoay9OYgnUsHrJ2oQc30g0GUYerNqXRtFLfMwO-siMlQ67cB_GiiM5byjTni5RQB4jR8JZ39WZP9peqd4q5JRGfkMydi3_DRhjiMBU0j2o1nl0tdLKLG8Q6TcVS6F_jHjedY7rKapqsWT-wN1bKqmo_9UF6ZNGIzxt35LwRwnQpfpdBO3loRyqtXjkbpzL_R_ndZHlH_Y2nO5sxUPvxNPTByNLOtjeqPY5GF5IcLA43QZcYyOachgS67xwjg"/>
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<section class="flex-1 p-6 md:p-12 lg:p-16 flex items-center justify-center">
+<div class="max-w-[1000px] w-full bg-surface-container-lowest border border-surface-container-highest overflow-hidden grid md:grid-cols-[40%_60%] relative">
+<!-- Left Column: Details -->
+<div class="p-8 md:p-12 border-b md:border-b-0 md:border-r border-surface-container-highest flex flex-col">
+<div class="flex items-center gap-4 mb-10">
+<img alt="Cláudio Fernandes" class="w-12 h-12 rounded-full border-2 border-primary-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAagvR3qnWaY8mNK0rJn1fFU9v6bQi_eto1qtHZD5hS4uUaqcD2yaIws9cg6aeNZBGkiLhJwqNaYtdbYPkS41QjjDc0BELRiQa2q75H0BK7ufJMdc1ADaO5725Kzcm2Ek65otGX1yTscqRZbFPhZT0d8usqFaaCoQGmNYmUukcPbRTw4zJlen8X2ficCDtO__1ruhIvM0Dw4RdCrJKBZyEnw33v96de6unCy3BYPrHp4-1iW2JUmv-YIDtDSUvxED8UGDWjL69oj5E"/>
+<div>
+<p class="text-secondary font-label-caps text-[10px] tracking-widest uppercase">Consultor</p>
+<h2 class="font-headline-md text-headline-md">Cláudio Fernandes</h2>
+</div>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-4 text-on-background">Consulta de 30 min</h3>
+<div class="flex flex-col gap-4 text-secondary mb-8">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<span class="font-bold">30 minutos</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">videocam</span>
+<span>Detalhes do link de conferência após confirmação</span>
+</div>
+</div>
+<p class="text-secondary leading-relaxed text-body-lg mb-auto">
+                        Uma conversa rápida para discutir seu projeto e alinhar expectativas iniciais sobre o escopo técnico.
+                    </p>
+<div class="mt-8 flex items-center gap-2 text-primary font-bold cursor-pointer hover:underline underline-offset-4">
+<span class="material-symbols-outlined">language</span>
+<span class="text-body-md">Horário de Brasília (GMT-3)</span>
+</div>
+</div>
+<!-- Right Column: Calendar -->
+<div class="p-8 md:p-12 bg-white">
+<div class="mb-8">
+<h4 class="font-headline-md text-headline-md text-on-background mb-1">Selecione uma data</h4>
+<div class="h-1 w-12 bg-primary-container"></div>
+</div>
+<!-- Calendar Grid -->
+<div class="mb-12">
+<div class="flex justify-between items-center mb-6">
+<h5 class="font-bold text-body-lg uppercase tracking-widest">Novembro 2024</h5>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-2 text-center text-[10px] font-label-caps text-secondary mb-4">
+<div>DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div>
+</div>
+<div class="grid grid-cols-7 gap-2">
+<!-- Empty spaces for start of month -->
+<div class="h-10"></div><div class="h-10"></div><div class="h-10"></div><div class="h-10"></div>
+<!-- Calendar Days -->
+<button class="h-10 w-full flex items-center justify-center text-body-md text-secondary-fixed cursor-not-allowed">1</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md text-secondary-fixed cursor-not-allowed">2</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">3</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">4</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">5</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md bg-primary-container text-on-primary-container font-bold rounded shadow-[0_4px_12px_rgba(204,255,0,0.4)]">6</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">7</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">8</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">9</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">10</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">11</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">12</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">13</button>
+<button class="h-10 w-full flex items-center justify-center text-body-md hover:bg-surface-container-high rounded transition-colors">14</button>
+</div>
+</div>
+<div class="flex items-center justify-between pt-8 border-t border-surface-container-highest">
+<div>
+<p class="text-[10px] font-label-caps text-secondary uppercase tracking-tighter">Selecionado</p>
+<p class="font-bold text-body-lg">Quarta-feira, 6 de Nov</p>
+</div>
+<button class="bg-primary-container text-[#121212] px-8 py-3 font-bold text-body-md hover:brightness-105 active:scale-95 transition-all uppercase tracking-widest">
+                            Continuar
+                        </button>
+</div>
+</div>
+<!-- Background visual element -->
+<div class="absolute -bottom-24 -right-24 w-64 h-64 bg-primary-container opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+</div>
+</section>
+</main>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (!this.classList.contains('cursor-not-allowed')) {
+                    const ripple = document.createElement('div');
+                    ripple.className = 'absolute inset-0 bg-white/20 animate-ping rounded-full pointer-events-none';
+                    this.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                }
+            });
+        });
+
+        // Simple active state toggle for calendar
+        const calendarButtons = document.querySelectorAll('.grid button:not(.cursor-not-allowed)');
+        calendarButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                calendarButtons.forEach(b => {
+                    b.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-bold', 'shadow-[0_4px_12px_rgba(204,255,0,0.4)]');
+                    b.classList.add('hover:bg-surface-container-high');
+                });
+                btn.classList.add('bg-primary-container', 'text-on-primary-container', 'font-bold', 'shadow-[0_4px_12px_rgba(204,255,0,0.4)]');
+                btn.classList.remove('hover:bg-surface-container-high');
+            });
+        });
+    </script>
+</body></html>
