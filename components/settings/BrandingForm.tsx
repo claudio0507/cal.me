@@ -94,19 +94,24 @@ export default function BrandingForm() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  function handleImageUpload(
+  async function handleImageUpload(
     e: React.ChangeEvent<HTMLInputElement>,
-    setPreview: (url: string) => void
+    setPreview: (url: string) => void,
+    maxEdge: number
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setErrorMsg("Imagem muito grande. Máximo 2 MB.");
+    if (file.size > 4 * 1024 * 1024) {
+      setErrorMsg("Imagem muito grande. Máximo 4 MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => setPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await downscaleImage(file, maxEdge);
+      setPreview(dataUrl);
+      setErrorMsg("");
+    } catch {
+      setErrorMsg("Não foi possível processar a imagem.");
+    }
   }
 
   async function handleSave() {
@@ -196,11 +201,11 @@ export default function BrandingForm() {
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   className="sr-only"
-                  onChange={(e) => handleImageUpload(e, setAvatarPreview)}
+                  onChange={(e) => handleImageUpload(e, setAvatarPreview, 480)}
                 />
               </div>
               <p className="mt-3 text-xs text-[var(--color-muted-2)]">
-                PNG, JPG ou WebP · até 2 MB
+                PNG, JPG ou WebP · até 4 MB
               </p>
             </div>
 
@@ -230,7 +235,7 @@ export default function BrandingForm() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 className="sr-only"
-                onChange={(e) => handleImageUpload(e, setBannerPreview)}
+                onChange={(e) => handleImageUpload(e, setBannerPreview, 1600)}
               />
               <p className="mt-3 text-xs text-[var(--color-muted-2)]">
                 Proporção ideal 3:1 · 1600 × 540 px
@@ -578,4 +583,48 @@ function ColorField({
       </div>
     </div>
   );
+}
+
+async function downscaleImage(file: File, maxEdge: number): Promise<string> {
+  const originalUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(file);
+  });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("image load failed"));
+    el.src = originalUrl;
+  });
+
+  const longestEdge = Math.max(img.width, img.height);
+  if (longestEdge <= maxEdge && file.size <= 600 * 1024) {
+    return originalUrl;
+  }
+
+  const scale = Math.min(1, maxEdge / longestEdge);
+  const targetW = Math.round(img.width * scale);
+  const targetH = Math.round(img.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return originalUrl;
+
+  const keepAlpha = file.type === "image/png" || file.type === "image/webp";
+  if (!keepAlpha) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, targetW, targetH);
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  const outputType = keepAlpha ? "image/png" : "image/jpeg";
+  const quality = keepAlpha ? undefined : 0.88;
+  return canvas.toDataURL(outputType, quality);
 }

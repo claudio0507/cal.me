@@ -132,22 +132,22 @@ function BookingFlow({ user }: { user: PublicUser }) {
       </header>
 
       <main className="flex-1">
-        {/* Hero — editorial layout: banner full-width, overlapping avatar */}
-        <section className="animate-fade-in">
-          <div
-            className="h-[120px] sm:h-[140px] lg:h-[160px] w-full relative"
-            style={{
-              background: user.bannerUrl
-                ? `url(${user.bannerUrl}) center / cover no-repeat`
-                : `linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-soft) 100%)`,
-            }}
-            aria-hidden="true"
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)]/40 to-transparent pointer-events-none" />
-          </div>
+        <div className="max-w-[1080px] mx-auto px-5 lg:px-8">
+          {/* Hero — editorial layout: banner contained, overlapping avatar */}
+          <section className="animate-fade-in pt-6 lg:pt-8">
+            <div
+              className="h-[120px] sm:h-[140px] lg:h-[160px] w-full relative rounded-[var(--radius-lg)] overflow-hidden border border-[var(--color-border)]"
+              style={{
+                background: user.bannerUrl
+                  ? `url(${user.bannerUrl}) center / cover no-repeat`
+                  : `linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-soft) 100%)`,
+              }}
+              aria-hidden="true"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)]/30 to-transparent pointer-events-none" />
+            </div>
 
-          <div className="max-w-[1080px] mx-auto px-5 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-x-10 gap-y-6 -mt-14 lg:-mt-16 mb-10 lg:mb-14">
+            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-x-10 gap-y-6 -mt-14 lg:-mt-16 mb-10 lg:mb-14 px-1">
               {/* Avatar — overlaps banner */}
               <div className="relative shrink-0">
                 <div className="w-[112px] h-[112px] lg:w-[128px] lg:h-[128px] rounded-[var(--radius-lg)] overflow-hidden bg-[var(--color-surface)] border-4 border-[var(--color-surface)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]">
@@ -203,11 +203,10 @@ function BookingFlow({ user }: { user: PublicUser }) {
                 )}
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <div className="max-w-[1080px] mx-auto px-5 lg:px-8 pb-10 lg:pb-14">
-          <span className="label block mb-3">Reservar um horário</span>
+          <div className="pb-10 lg:pb-14">
+            <span className="label block mb-3">Reservar um horário</span>
           {/* Steps */}
           <Stepper step={step} />
 
@@ -266,6 +265,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
                 icsToken={icsToken}
               />
             )}
+          </div>
           </div>
         </div>
       </main>
