@@ -15,23 +15,32 @@ function greet() {
   return "Boa noite";
 }
 
-const BOOKING_URL = "https://calme-khaki.vercel.app/claudio";
-
 export default function DashboardPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/appointments")
-      .then((r) => {
+    Promise.all([
+      fetch("/api/appointments").then((r) => {
         if (r.status === 401) { router.push("/login"); return []; }
         return r.json();
+      }),
+      fetch("/api/users/me").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([appts, me]) => {
+        setAppointments(Array.isArray(appts) ? appts : []);
+        if (me?.username) setUsername(me.username);
       })
-      .then((data) => setAppointments(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [router]);
+
+  const bookingUrl =
+    typeof window !== "undefined" && username
+      ? `${window.location.origin}/${username}`
+      : "";
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });
@@ -44,7 +53,7 @@ export default function DashboardPage() {
       description="Resumo da sua agenda e atalhos para compartilhar a sua página."
       actions={
         <div className="flex items-center gap-2">
-          <CopyLinkButton url={BOOKING_URL} />
+          <CopyLinkButton url={bookingUrl} />
           <button
             type="button"
             onClick={handleLogout}
@@ -92,8 +101,8 @@ export default function DashboardPage() {
               <QuickAction
                 icon="link"
                 title="Copiar link"
-                description={BOOKING_URL}
-                onClick={() => navigator.clipboard.writeText(BOOKING_URL)}
+                description={bookingUrl}
+                onClick={() => navigator.clipboard.writeText(bookingUrl)}
               />
               <QuickAction
                 icon="message-circle"
@@ -101,7 +110,7 @@ export default function DashboardPage() {
                 description="Mensagem pronta para enviar"
                 onClick={() =>
                   window.open(
-                    `https://wa.me/?text=${encodeURIComponent(`Agende uma reunião comigo: ${BOOKING_URL}`)}`,
+                    `https://wa.me/?text=${encodeURIComponent(`Agende uma reunião comigo: ${bookingUrl}`)}`,
                     "_blank",
                     "noopener,noreferrer"
                   )
@@ -113,7 +122,7 @@ export default function DashboardPage() {
                 description="Abre seu cliente de e-mail padrão"
                 onClick={() =>
                   window.open(
-                    `mailto:?subject=${encodeURIComponent("Agende um horário")}&body=${encodeURIComponent(`Olá! Escolha um horário: ${BOOKING_URL}`)}`,
+                    `mailto:?subject=${encodeURIComponent("Agende um horário")}&body=${encodeURIComponent(`Olá! Escolha um horário: ${bookingUrl}`)}`,
                     "_blank"
                   )
                 }

@@ -1,13 +1,6 @@
 "use client";
 
-/**
- * Cal.me — BrandingForm
- * White-label customization: avatar, banner, brand color, welcome copy.
- * Live preview reflects all changes against tenant theme.
- */
-
-import { useRef, useState } from "react";
-import { MOCK_USER, MOCK_EVENT_TYPES } from "@/lib/mock-data";
+import { useEffect, useRef, useState } from "react";
 import { PRESET_PALETTES, readableOn } from "@/lib/theme";
 import { Icon } from "@/components/ui/Icon";
 
@@ -19,27 +12,72 @@ interface ServiceTypeEntry {
   id: string;
   title: string;
   duration: number;
+  isPersisted: boolean;
+}
+
+interface UserMe {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string;
+  username: string;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  welcomeMessage: string | null;
+  primaryColor: string;
+  primaryContainer: string;
+  eventTypes: { id: string; title: string; duration: number; slug: string; isActive: boolean }[];
 }
 
 export default function BrandingForm() {
-  const [name, setName] = useState(MOCK_USER.name);
-  const [role, setRole] = useState(MOCK_USER.role ?? "");
-  const [email, setEmail] = useState(MOCK_USER.email);
-  const [welcomeMessage, setWelcomeMessage] = useState(MOCK_USER.welcomeMessage ?? "");
-  const [primaryColor, setPrimaryColor] = useState(MOCK_USER.primaryColor);
-  const [primaryContainer, setPrimaryContainer] = useState(MOCK_USER.primaryContainer);
-  const [avatarPreview, setAvatarPreview] = useState(MOCK_USER.avatarUrl ?? "");
-  const [bannerPreview, setBannerPreview] = useState(MOCK_USER.bannerUrl ?? "");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<ServiceTypeEntry[]>(
-    MOCK_EVENT_TYPES.map((e) => ({ id: e.id, title: e.title, duration: e.duration }))
-  );
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [email, setEmail] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#506600");
+  const [primaryContainer, setPrimaryContainer] = useState("#ccff00");
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/users/me")
+      .then((r) => r.json())
+      .then((u: UserMe) => {
+        if (!u || !u.id) return;
+        setUsername(u.username);
+        setName(u.name);
+        setRole(u.role ?? "");
+        setEmail(u.email);
+        setWelcomeMessage(u.welcomeMessage ?? "");
+        setPrimaryColor(u.primaryColor);
+        setPrimaryContainer(u.primaryContainer);
+        setAvatarPreview(u.avatarUrl ?? "");
+        setBannerPreview(u.bannerUrl ?? "");
+        setServiceTypes(
+          (u.eventTypes ?? []).map((e) => ({
+            id: e.id,
+            title: e.title,
+            duration: e.duration,
+            isPersisted: true,
+          }))
+        );
+      })
+      .catch(() => setErrorMsg("Não foi possível carregar suas configurações."))
+      .finally(() => setLoading(false));
+  }, []);
 
   function addServiceType() {
     if (serviceTypes.length >= MAX_SERVICE_TYPES) return;
     setServiceTypes((prev) => [
       ...prev,
-      { id: `evt_new_${Date.now()}`, title: "", duration: 30 },
+      { id: `new_${Date.now()}`, title: "", duration: 30, isPersisted: false },
     ]);
   }
 
@@ -62,21 +100,74 @@ export default function BrandingForm() {
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setErrorMsg("Imagem muito grande. Máximo 2 MB.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   }
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+  async function handleSave() {
+    setSaving(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          role,
+          email,
+          welcomeMessage,
+          primaryColor,
+          primaryContainer,
+          avatarUrl: avatarPreview,
+          bannerUrl: bannerPreview,
+          serviceTypes: serviceTypes.map((s) => ({
+            id: s.isPersisted ? s.id : undefined,
+            title: s.title,
+            duration: s.duration,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error ?? "Erro ao salvar.");
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+      const refreshed = await fetch("/api/users/me").then((r) => r.json());
+      if (refreshed?.eventTypes) {
+        setServiceTypes(
+          refreshed.eventTypes.map((e: UserMe["eventTypes"][number]) => ({
+            id: e.id,
+            title: e.title,
+            duration: e.duration,
+            isPersisted: true,
+          }))
+        );
+      }
+    } catch {
+      setErrorMsg("Erro de conexão. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-[var(--ink-900)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
-      {/* Form */}
       <div className="space-y-6 animate-fade-in min-w-0">
-        {/* ─── Identity ─── */}
         <FormSection title="Identidade visual" caption="Logotipo e banner exibidos na página de reserva.">
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
             <div>
@@ -85,11 +176,7 @@ export default function BrandingForm() {
                 <div className="w-24 h-24 rounded-[var(--radius)] overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-surface-2)]">
                   {avatarPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarPreview}
-                      alt="Logo"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={avatarPreview} alt="Logo" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-[var(--color-muted-2)]">
                       <Icon name="image" size={26} />
@@ -127,11 +214,7 @@ export default function BrandingForm() {
               >
                 {bannerPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={bannerPreview}
-                    alt="Banner"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover" />
                 ) : (
                   <div className="grid-bg w-full h-full grid place-items-center text-[var(--color-muted)]">
                     <span className="flex items-center gap-2 text-sm font-medium">
@@ -156,7 +239,6 @@ export default function BrandingForm() {
           </div>
         </FormSection>
 
-        {/* ─── Brand color ─── */}
         <FormSection
           title="Cor de destaque"
           caption="Aplicada apenas à página pública. O painel administrativo permanece neutro."
@@ -201,20 +283,11 @@ export default function BrandingForm() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ColorField
-              label="Principal"
-              value={primaryColor}
-              onChange={setPrimaryColor}
-            />
-            <ColorField
-              label="Container claro"
-              value={primaryContainer}
-              onChange={setPrimaryContainer}
-            />
+            <ColorField label="Principal" value={primaryColor} onChange={setPrimaryColor} />
+            <ColorField label="Container claro" value={primaryContainer} onChange={setPrimaryContainer} />
           </div>
         </FormSection>
 
-        {/* ─── Host profile ─── */}
         <FormSection title="Perfil do Anfitrião" caption="Informações exibidas na página pública de reserva.">
           <div className="space-y-5">
             <Field label="Nome exibido" hint="Pode ser o nome da empresa ou do profissional.">
@@ -266,7 +339,6 @@ export default function BrandingForm() {
           </div>
         </FormSection>
 
-        {/* ─── Service types ─── */}
         <FormSection
           title="Tipos de serviço"
           caption={`Defina até ${MAX_SERVICE_TYPES} tipos de reunião e o tempo estimado de cada um.`}
@@ -321,6 +393,13 @@ export default function BrandingForm() {
           )}
         </FormSection>
 
+        {errorMsg && (
+          <p className="text-[13px] text-[var(--color-danger)] flex items-center gap-1.5">
+            <Icon name="alert-circle" size={14} />
+            {errorMsg}
+          </p>
+        )}
+
         <div className="flex items-center justify-between gap-3 pt-2">
           <p className="text-xs text-[var(--color-muted)]">
             As alterações entram em vigor imediatamente após salvar.
@@ -328,20 +407,25 @@ export default function BrandingForm() {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
+            disabled={saving}
+            className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Icon name={saved ? "check" : "save"} size={15} strokeWidth={2} />
-            {saved ? "Configurações salvas" : "Salvar configurações"}
+            <Icon
+              name={saving ? "sync" : saved ? "check" : "save"}
+              size={15}
+              strokeWidth={2}
+              className={saving ? "animate-spin" : ""}
+            />
+            {saving ? "Salvando…" : saved ? "Configurações salvas" : "Salvar configurações"}
           </button>
         </div>
       </div>
 
-      {/* ─── Live preview ─── */}
       <aside className="hidden xl:block sticky top-24 self-start">
         <div className="flex items-center justify-between mb-3">
           <span className="label">Preview em tempo real</span>
           <span className="font-mono text-[11px] text-[var(--color-muted-2)]">
-            cal.me/{MOCK_USER.username}
+            cal.me/{username}
           </span>
         </div>
         <div

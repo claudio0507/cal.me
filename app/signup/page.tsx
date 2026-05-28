@@ -5,12 +5,29 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 
-export default function LoginPage() {
+function suggestUsername(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 30);
+}
+
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameTouched, setUsernameTouched] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function handleNameChange(v: string) {
+    setName(v);
+    if (!usernameTouched) setUsername(suggestUsername(v));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,15 +35,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, username, email, password }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Erro ao fazer login");
+        setError(data.error ?? "Erro ao criar conta.");
         return;
       }
 
@@ -40,9 +57,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] px-4 py-10">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2.5">
             <span className="w-9 h-9 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
@@ -56,13 +72,52 @@ export default function LoginPage() {
 
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-7">
           <h1 className="font-display text-[22px] tracking-tight text-[var(--ink-900)] mb-1">
-            Acesso ao painel
+            Criar conta
           </h1>
           <p className="text-sm text-[var(--color-muted)] mb-6">
-            Entre com suas credenciais para gerenciar sua agenda.
+            Sua página de reservas pronta em segundos.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="block">
+              <span className="text-[12px] font-medium text-[var(--ink-800)] block mb-1.5">
+                Nome
+              </span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                required
+                maxLength={80}
+                placeholder="Seu nome ou empresa"
+                className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)] placeholder:text-[var(--color-muted-2)]"
+              />
+            </label>
+
+            <label className="block">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-medium text-[var(--ink-800)]">
+                  Seu link
+                </span>
+                <span className="text-[11px] text-[var(--color-muted-2)] font-mono">
+                  cal.me/{username || "username"}
+                </span>
+              </div>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsernameTouched(true);
+                  setUsername(suggestUsername(e.target.value));
+                }}
+                required
+                maxLength={30}
+                pattern="[a-z0-9]{3,}"
+                placeholder="seunome"
+                className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)] placeholder:text-[var(--color-muted-2)] font-mono"
+              />
+            </label>
+
             <label className="block">
               <span className="text-[12px] font-medium text-[var(--ink-800)] block mb-1.5">
                 E-mail
@@ -87,8 +142,9 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete="current-password"
-                placeholder="••••••••"
+                autoComplete="new-password"
+                minLength={8}
+                placeholder="Ao menos 8 caracteres"
                 className="w-full h-10 px-3 text-sm bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius-sm)] text-[var(--ink-900)] outline-none focus:border-[var(--ink-900)] placeholder:text-[var(--color-muted-2)]"
               />
             </label>
@@ -108,11 +164,11 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Icon name="sync" size={15} className="animate-spin" />
-                  Entrando…
+                  Criando conta…
                 </>
               ) : (
                 <>
-                  Entrar no painel
+                  Criar conta
                   <Icon name="arrow-right" size={15} />
                 </>
               )}
@@ -120,9 +176,9 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-[13px] text-[var(--color-muted)] mt-6">
-            Ainda não tem conta?{" "}
-            <Link href="/signup" className="text-[var(--ink-900)] font-medium hover:underline">
-              Criar conta
+            Já tem conta?{" "}
+            <Link href="/login" className="text-[var(--ink-900)] font-medium hover:underline">
+              Entrar
             </Link>
           </p>
         </div>

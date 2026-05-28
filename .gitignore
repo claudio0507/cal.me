@@ -42,3 +42,5 @@ next-env.d.ts
 
 # local agent state
 .claude/
+
+.env*
