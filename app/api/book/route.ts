@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { sendBookingEmails } from "@/lib/email";
 
 function generateMeetingLink(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -35,7 +37,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não é possível agendar no passado" }, { status: 400 });
   }
 
-  // Conflict check against confirmed/pending appointments
   const conflict = await prisma.appointment.findFirst({
     where: {
       userId: user.id,
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   const meetingLink = generateMeetingLink();
+  const icsToken = crypto.randomBytes(24).toString("base64url");
 
   const appointment = await prisma.appointment.create({
     data: {
@@ -66,8 +68,30 @@ export async function POST(req: NextRequest) {
       channel: "VIDEO",
       notes: notes || null,
       meetingLink,
+      icsToken,
     },
   });
 
-  return NextResponse.json({ appointment, meetingLink }, { status: 201 });
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("host") ?? "calme-khaki.vercel.app";
+  const appUrl = `${proto}://${host}`;
+
+  sendBookingEmails({
+    to: guestEmail,
+    guestName,
+    hostName: user.name,
+    hostEmail: user.email,
+    hostRole: user.role,
+    eventTitle: eventType.title,
+    start,
+    end,
+    meetingLink,
+    notes: notes || null,
+    appointmentId: appointment.id,
+    appUrl,
+    icsToken,
+    brandColor: user.primaryColor,
+  }).catch((err) => console.error("[book] email error", err));
+
+  return NextResponse.json({ appointment, meetingLink, icsToken }, { status: 201 });
 }

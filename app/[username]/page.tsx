@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { generateTimeSlots } from "@/lib/mock-data";
 import type { EventType } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
 import { getThemeStyleVars } from "@/lib/theme";
+import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/ics";
 
 type Step = "event" | "datetime" | "details" | "confirmed";
 
@@ -69,6 +70,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
   const [guestEmail, setGuestEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [meetingLink, setMeetingLink] = useState<string | null>(null);
+  const [icsToken, setIcsToken] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
@@ -104,6 +106,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
       if (!res.ok) throw new Error(data.error ?? "Erro ao confirmar");
 
       setMeetingLink(data.meetingLink);
+      setIcsToken(data.icsToken ?? null);
       setStep("confirmed");
     } catch (err) {
       setBookingError(err instanceof Error ? err.message : "Erro ao agendar");
@@ -129,21 +132,25 @@ function BookingFlow({ user }: { user: PublicUser }) {
       </header>
 
       <main className="flex-1">
-        <div className="max-w-[1080px] mx-auto px-5 lg:px-8 py-10 lg:py-14">
-          {/* Hero */}
-          <section className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-10 mb-12 animate-fade-in">
-            <div>
-              <div
-                className="h-16 -mx-1 rounded-[var(--radius)] mb-5"
-                style={{
-                  background: user.bannerUrl
-                    ? `url(${user.bannerUrl}) center / cover`
-                    : `var(--color-brand)`,
-                }}
-                aria-hidden="true"
-              />
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-[var(--radius)] overflow-hidden bg-[var(--color-surface-2)] border border-[var(--color-border)] shrink-0">
+        {/* Hero — editorial layout: banner full-width, overlapping avatar */}
+        <section className="animate-fade-in">
+          <div
+            className="h-[180px] sm:h-[220px] lg:h-[260px] w-full relative"
+            style={{
+              background: user.bannerUrl
+                ? `url(${user.bannerUrl}) center / cover no-repeat`
+                : `linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-soft) 100%)`,
+            }}
+            aria-hidden="true"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)]/40 to-transparent pointer-events-none" />
+          </div>
+
+          <div className="max-w-[1080px] mx-auto px-5 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-x-10 gap-y-6 -mt-14 lg:-mt-16 mb-10 lg:mb-14">
+              {/* Avatar — overlaps banner */}
+              <div className="relative shrink-0">
+                <div className="w-[112px] h-[112px] lg:w-[128px] lg:h-[128px] rounded-[var(--radius-lg)] overflow-hidden bg-[var(--color-surface)] border-4 border-[var(--color-surface)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]">
                   {user.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -152,39 +159,55 @@ function BookingFlow({ user }: { user: PublicUser }) {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full grid place-items-center text-[var(--color-muted)]">
-                      <Icon name="user" size={18} />
+                    <div
+                      className="w-full h-full grid place-items-center"
+                      style={{ background: "var(--color-brand-soft)", color: "var(--color-brand-on-soft)" }}
+                    >
+                      <Icon name="user" size={44} strokeWidth={1.4} />
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
+              </div>
+
+              {/* Host identity + title */}
+              <div className="min-w-0 lg:pt-16">
+                <div className="flex items-baseline gap-2 mb-2">
                   <span className="label">Anfitrião</span>
-                  <p className="font-display text-[20px] leading-tight tracking-tight text-[var(--ink-900)] mt-0.5">
-                    {user.name}
-                  </p>
-                  {user.role && (
-                    <p className="text-xs font-medium text-[var(--ink-700)] mt-0.5">
-                      {user.role}
-                    </p>
-                  )}
-                  <p className="text-xs text-[var(--color-muted)] mt-0.5 truncate font-mono">
-                    {user.email}
-                  </p>
+                  <span className="w-1 h-1 rounded-full bg-[var(--color-muted-2)]" aria-hidden="true" />
+                  <span className="text-[11px] font-mono text-[var(--color-muted-2)]">
+                    cal.me/{user.username}
+                  </span>
                 </div>
+
+                <h1 className="font-display text-[clamp(28px,4vw,44px)] leading-[1.05] tracking-[-0.02em] text-[var(--ink-900)]">
+                  {user.name}
+                </h1>
+
+                {user.role && (
+                  <p className="text-[15px] font-medium text-[var(--ink-700)] mt-1">
+                    {user.role}
+                  </p>
+                )}
+
+                <p className="text-[13px] text-[var(--color-muted)] mt-1 font-mono">
+                  {user.email}
+                </p>
+
+                {user.welcomeMessage && (
+                  <p
+                    className="text-[15px] lg:text-[16px] leading-relaxed text-[var(--ink-800)] mt-5 max-w-[640px] pl-4 border-l-2"
+                    style={{ borderColor: "var(--color-brand)" }}
+                  >
+                    {user.welcomeMessage}
+                  </p>
+                )}
               </div>
             </div>
+          </div>
+        </section>
 
-            <div>
-              <span className="label">Página de reserva</span>
-              <h1 className="font-display text-[clamp(32px,4.5vw,52px)] leading-[1.05] tracking-[-0.02em] text-[var(--ink-900)] mt-3 mb-4">
-                Reserve um horário com {user.name.split(" ")[0]}.
-              </h1>
-              <p className="text-[16px] leading-relaxed text-[var(--color-muted)] max-w-prose">
-                {user.welcomeMessage}
-              </p>
-            </div>
-          </section>
-
+        <div className="max-w-[1080px] mx-auto px-5 lg:px-8 pb-10 lg:pb-14">
+          <span className="label block mb-3">Reservar um horário</span>
           {/* Steps */}
           <Stepper step={step} />
 
@@ -238,7 +261,9 @@ function BookingFlow({ user }: { user: PublicUser }) {
                 date={selectedDate}
                 time={selectedTime}
                 guestName={guestName}
+                hostName={user.name}
                 meetingLink={meetingLink}
+                icsToken={icsToken}
               />
             )}
           </div>
@@ -700,30 +725,70 @@ function ConfirmedStep({
   date,
   time,
   guestName,
+  hostName,
   meetingLink,
+  icsToken,
 }: {
   event: EventType;
   date: Date;
   time: string;
   guestName: string;
+  hostName: string;
   meetingLink: string | null;
+  icsToken: string | null;
 }) {
-  return (
-    <div className="text-center max-w-md mx-auto py-10 animate-fade-in">
-      <div
-        className="w-14 h-14 grid place-items-center rounded-full mx-auto mb-6"
-        style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
-      >
-        <Icon name="check" size={22} strokeWidth={2.4} />
-      </div>
-      <h2 className="font-display text-[28px] tracking-tight text-[var(--ink-900)] mb-3">
-        Agendamento confirmado.
-      </h2>
-      <p className="text-sm text-[var(--color-muted)] leading-relaxed mb-6">
-        Obrigado, {guestName.split(" ")[0]}. Um convite foi enviado para o seu e-mail.
-      </p>
+  const start = useMemo(() => {
+    const [h, m] = time.split(":").map(Number);
+    const d = new Date(date);
+    d.setHours(h, m, 0, 0);
+    return d;
+  }, [date, time]);
+  const end = useMemo(() => new Date(start.getTime() + event.duration * 60 * 1000), [start, event.duration]);
 
-      <div className="text-left bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-5 mb-4">
+  const description = meetingLink
+    ? `Reunião com ${hostName}.\n${meetingLink}`
+    : `Reunião com ${hostName}.`;
+
+  const gcalUrl = googleCalendarUrl({
+    title: event.title,
+    start,
+    end,
+    description,
+    location: meetingLink ?? undefined,
+  });
+  const outlookUrl = outlookCalendarUrl({
+    title: event.title,
+    start,
+    end,
+    description,
+    location: meetingLink ?? undefined,
+  });
+  const icsHref = icsToken ? `/api/appointments/${icsToken}/ics` : null;
+
+  const waMessage = `Olá! Confirmei nossa reunião:\n\n${event.title}\n${date.toLocaleDateString(
+    "pt-BR",
+    { weekday: "long", day: "numeric", month: "long" }
+  )} às ${time}${meetingLink ? `\n\n${meetingLink}` : ""}`;
+  const waHref = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+
+  return (
+    <div className="max-w-[640px] mx-auto py-10 animate-fade-in">
+      <div className="text-center mb-10">
+        <div
+          className="w-14 h-14 grid place-items-center rounded-full mx-auto mb-6"
+          style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
+        >
+          <Icon name="check" size={22} strokeWidth={2.4} />
+        </div>
+        <h2 className="font-display text-[28px] tracking-tight text-[var(--ink-900)] mb-3">
+          Agendamento confirmado.
+        </h2>
+        <p className="text-sm text-[var(--color-muted)] leading-relaxed">
+          Obrigado, {guestName.split(" ")[0]}. Enviamos o convite para o seu e-mail.
+        </p>
+      </div>
+
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-5 mb-4">
         <Summary event={event} date={date} time={time} />
       </div>
 
@@ -732,7 +797,7 @@ function ConfirmedStep({
           href={meetingLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between gap-3 px-4 py-3 mb-6 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] text-left hover:bg-[var(--color-surface-2)] transition-colors group"
+          className="flex items-center justify-between gap-3 px-4 py-3 mb-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] hover:bg-[var(--color-surface-2)] transition-colors group"
         >
           <div className="flex items-center gap-3 min-w-0">
             <span
@@ -741,7 +806,7 @@ function ConfirmedStep({
             >
               <Icon name="video" size={16} />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 text-left">
               <p className="text-[12px] font-medium text-[var(--ink-900)]">Entrar na reunião</p>
               <p className="text-[11px] text-[var(--color-muted)] font-mono truncate">
                 {meetingLink}
@@ -756,22 +821,124 @@ function ConfirmedStep({
         </a>
       )}
 
-      <div className="flex gap-2 justify-center">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] rounded-[var(--radius)] transition-colors"
-        >
-          <Icon name="calendar" size={14} />
-          Adicionar ao calendário
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium bg-[var(--ink-900)] text-white hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <AddToCalendarMenu gcalUrl={gcalUrl} outlookUrl={outlookUrl} icsHref={icsHref} />
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-medium bg-[var(--ink-900)] text-white hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
         >
           <Icon name="message-circle" size={14} />
-          Falar no WhatsApp
-        </button>
+          Compartilhar no WhatsApp
+        </a>
       </div>
     </div>
+  );
+}
+
+function AddToCalendarMenu({
+  gcalUrl,
+  outlookUrl,
+  icsHref,
+}: {
+  gcalUrl: string;
+  outlookUrl: string;
+  icsHref: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="w-full inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-medium border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] rounded-[var(--radius)] transition-colors"
+      >
+        <Icon name="calendar" size={14} />
+        Adicionar ao calendário
+        <Icon name={open ? "chevron-up" : "chevron-down"} size={13} className="text-[var(--color-muted)]" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute z-10 bottom-full sm:top-full sm:bottom-auto mb-2 sm:mb-0 sm:mt-2 left-0 right-0 bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[var(--radius)] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)] overflow-hidden animate-fade-in"
+        >
+          <CalendarOption
+            href={gcalUrl}
+            label="Google Agenda"
+            external
+            onClick={() => setOpen(false)}
+          />
+          <CalendarOption
+            href={outlookUrl}
+            label="Outlook"
+            external
+            onClick={() => setOpen(false)}
+          />
+          {icsHref && (
+            <CalendarOption
+              href={icsHref}
+              label="Apple / Outros (.ics)"
+              download
+              onClick={() => setOpen(false)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CalendarOption({
+  href,
+  label,
+  external,
+  download,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  external?: boolean;
+  download?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      download={download ? "" : undefined}
+      role="menuitem"
+      className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-[var(--ink-900)] hover:bg-[var(--color-surface-2)] transition-colors border-b border-[var(--color-border)] last:border-b-0"
+    >
+      <span className="font-medium">{label}</span>
+      <Icon
+        name={download ? "download" : "external-link"}
+        size={13}
+        className="text-[var(--color-muted)]"
+      />
+    </a>
   );
 }
