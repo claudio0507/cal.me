@@ -6,7 +6,7 @@ import { generateTimeSlots } from "@/lib/mock-data";
 import type { EventType } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
 import { getThemeStyleVars } from "@/lib/theme";
-import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/ics";
+import { googleCalendarUrl } from "@/lib/ics";
 
 type Step = "event" | "datetime" | "details" | "confirmed";
 
@@ -135,7 +135,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
         {/* Hero — editorial layout: banner full-width, overlapping avatar */}
         <section className="animate-fade-in">
           <div
-            className="h-[180px] sm:h-[220px] lg:h-[260px] w-full relative"
+            className="h-[120px] sm:h-[140px] lg:h-[160px] w-full relative"
             style={{
               background: user.bannerUrl
                 ? `url(${user.bannerUrl}) center / cover no-repeat`
@@ -756,13 +756,6 @@ function ConfirmedStep({
     description,
     location: meetingLink ?? undefined,
   });
-  const outlookUrl = outlookCalendarUrl({
-    title: event.title,
-    start,
-    end,
-    description,
-    location: meetingLink ?? undefined,
-  });
   const icsHref = icsToken ? `/api/appointments/${icsToken}/ics` : null;
 
   const waMessage = `Olá! Confirmei nossa reunião:\n\n${event.title}\n${date.toLocaleDateString(
@@ -822,7 +815,7 @@ function ConfirmedStep({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <AddToCalendarMenu gcalUrl={gcalUrl} outlookUrl={outlookUrl} icsHref={icsHref} />
+        <AddToCalendarMenu gcalUrl={gcalUrl} icsHref={icsHref} />
         <a
           href={waHref}
           target="_blank"
@@ -839,11 +832,9 @@ function ConfirmedStep({
 
 function AddToCalendarMenu({
   gcalUrl,
-  outlookUrl,
   icsHref,
 }: {
   gcalUrl: string;
-  outlookUrl: string;
   icsHref: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -887,12 +878,6 @@ function AddToCalendarMenu({
           <CalendarOption
             href={gcalUrl}
             label="Google Agenda"
-            external
-            onClick={() => setOpen(false)}
-          />
-          <CalendarOption
-            href={outlookUrl}
-            label="Outlook"
             external
             onClick={() => setOpen(false)}
           />
