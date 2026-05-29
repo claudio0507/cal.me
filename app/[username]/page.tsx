@@ -411,7 +411,18 @@ function DateTimeStep({
   );
 
   const days = useMemo(() => buildMonth(cursor), [cursor]);
-  const effectiveDate = selectedDate ?? findFirstAvailableDate(today, activeDays);
+  const effectiveDate = useMemo(
+    () =>
+      selectedDate ??
+      findFirstAvailableDateWithSlots(
+        today,
+        activeDays,
+        appointments,
+        availability,
+        DEFAULT_SLOT_GRANULARITY
+      ),
+    [selectedDate, today, activeDays, appointments, availability]
+  );
 
   const slots = useMemo(
     () =>
@@ -553,6 +564,25 @@ function findFirstAvailableDate(from: Date, activeDays: Set<number>): Date | nul
   const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   for (let i = 0; i < 60; i++) {
     if (activeDays.has(d.getDay())) return new Date(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
+function findFirstAvailableDateWithSlots(
+  from: Date,
+  activeDays: Set<number>,
+  appointments: Array<{ startTime: string | Date; endTime: string | Date; status: string }>,
+  availability: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>,
+  granularity: number
+): Date | null {
+  if (activeDays.size === 0) return null;
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  for (let i = 0; i < 60; i++) {
+    if (activeDays.has(d.getDay())) {
+      const slots = generateTimeSlots(new Date(d), granularity, appointments, availability);
+      if (slots.length > 0) return new Date(d);
+    }
     d.setDate(d.getDate() + 1);
   }
   return null;

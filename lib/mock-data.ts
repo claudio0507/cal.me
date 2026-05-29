@@ -179,6 +179,9 @@ export function generateTimeSlots(
     end: new Date(apt.endTime),
   }));
 
+  const now = new Date();
+  const leadMs = 5 * 60 * 1000;
+
   const slots: string[] = [];
   for (const avail of availabilities) {
     const [startH, startM] = avail.startTime.split(":").map(Number);
@@ -190,6 +193,8 @@ export function generateTimeSlots(
       const slotStart = new Date(date);
       slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
       const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
+
+      if (slotStart.getTime() - leadMs < now.getTime()) continue;
 
       const hasConflict = busyRanges.some(
         (busy) => slotStart < busy.end && slotEnd > busy.start
