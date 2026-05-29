@@ -154,10 +154,12 @@ export const MOCK_CALENDAR_INTEGRATIONS: CalendarIntegration[] = [
 export function generateTimeSlots(
   date: Date,
   duration: number = 30,
-  existingAppointments?: Array<{ startTime: string | Date; endTime: string | Date; status: string }>
+  existingAppointments?: Array<{ startTime: string | Date; endTime: string | Date; status: string }>,
+  availabilitySource?: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>
 ): string[] {
   const dayOfWeek = date.getDay();
-  const availabilities = MOCK_AVAILABILITY.filter(
+  const source0 = availabilitySource ?? MOCK_AVAILABILITY;
+  const availabilities = source0.filter(
     (a) => a.dayOfWeek === dayOfWeek && a.isActive
   );
 

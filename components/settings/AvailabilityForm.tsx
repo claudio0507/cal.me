@@ -1,13 +1,6 @@
 "use client";
 
-/**
- * Cal.me — AvailabilityForm
- * Weekly grid for configuring active days + time windows.
- */
-
-import { useState } from "react";
-import { MOCK_AVAILABILITY } from "@/lib/mock-data";
-import type { Availability } from "@/lib/types";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 
 const WEEK_DAYS = [
@@ -26,42 +19,107 @@ for (let h = 0; h < 24; h++) {
   TIME_OPTIONS.push(`${hh}:00`, `${hh}:30`);
 }
 
+interface Slot {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
+
 export default function AvailabilityForm() {
-  const [availabilities, setAvailabilities] = useState<Availability[]>(
-    WEEK_DAYS.map((_, index) => {
-      const match = MOCK_AVAILABILITY.find((a) => a.dayOfWeek === index);
-      return {
-        id: match?.id || `new_${index}`,
-        userId: "usr_001",
-        dayOfWeek: index,
-        startTime: match?.startTime ?? "09:00",
-        endTime: match?.endTime ?? "18:00",
-        isActive: match ? match.isActive : index !== 0 && index !== 6,
-      };
-    })
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [slots, setSlots] = useState<Slot[]>(() =>
+    WEEK_DAYS.map((_, i) => ({
+      dayOfWeek: i,
+      startTime: "09:00",
+      endTime: "18:00",
+      isActive: i !== 0 && i !== 6,
+    }))
   );
 
-  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    fetch("/api/users/me")
+      .then((r) => r.json())
+      .then((u) => {
+        if (!u?.availability) return;
+        const byDay = new Map<number, Slot>();
+        for (const a of u.availability) {
+          byDay.set(a.dayOfWeek, {
+            dayOfWeek: a.dayOfWeek,
+            startTime: a.startTime,
+            endTime: a.endTime,
+            isActive: a.isActive,
+          });
+        }
+        setSlots(
+          WEEK_DAYS.map((_, i) =>
+            byDay.get(i) ?? {
+              dayOfWeek: i,
+              startTime: "09:00",
+              endTime: "18:00",
+              isActive: false,
+            }
+          )
+        );
+      })
+      .catch(() => setErrorMsg("Não foi possível carregar."))
+      .finally(() => setLoading(false));
+  }, []);
 
   function toggleDay(dayOfWeek: number) {
-    setAvailabilities((prev) =>
-      prev.map((item) =>
-        item.dayOfWeek === dayOfWeek ? { ...item, isActive: !item.isActive } : item
-      )
+    setSlots((prev) =>
+      prev.map((s) => (s.dayOfWeek === dayOfWeek ? { ...s, isActive: !s.isActive } : s))
     );
   }
 
   function updateTime(dayOfWeek: number, field: "startTime" | "endTime", value: string) {
-    setAvailabilities((prev) =>
-      prev.map((item) =>
-        item.dayOfWeek === dayOfWeek ? { ...item, [field]: value } : item
-      )
+    setSlots((prev) =>
+      prev.map((s) => (s.dayOfWeek === dayOfWeek ? { ...s, [field]: value } : s))
     );
   }
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+  async function handleSave() {
+    for (const s of slots) {
+      if (s.isActive && s.startTime >= s.endTime) {
+        setErrorMsg(
+          `${WEEK_DAYS[s.dayOfWeek].full}: horário de início deve ser anterior ao fim.`
+        );
+        return;
+      }
+    }
+
+    setSaving(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ availability: slots }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error ?? "Erro ao salvar.");
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch {
+      setErrorMsg("Erro de conexão. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-[var(--ink-900)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -81,7 +139,7 @@ export default function AvailabilityForm() {
 
         <ul role="list" className="divide-y divide-[var(--color-border)]">
           {WEEK_DAYS.map((day, index) => {
-            const cfg = availabilities.find((a) => a.dayOfWeek === index)!;
+            const cfg = slots.find((a) => a.dayOfWeek === index)!;
             return (
               <li
                 key={day.full}
@@ -129,6 +187,13 @@ export default function AvailabilityForm() {
         </ul>
       </section>
 
+      {errorMsg && (
+        <p className="text-[13px] text-[var(--color-danger)] flex items-center gap-1.5">
+          <Icon name="alert-circle" size={14} />
+          {errorMsg}
+        </p>
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-[var(--color-muted)]">
           As alterações afetam apenas novos agendamentos.
@@ -136,10 +201,16 @@ export default function AvailabilityForm() {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors"
+          disabled={saving}
+          className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium text-white bg-[var(--ink-900)] hover:bg-[var(--ink-800)] rounded-[var(--radius)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Icon name={saved ? "check" : "save"} size={15} strokeWidth={2} />
-          {saved ? "Salvo" : "Salvar alterações"}
+          <Icon
+            name={saving ? "sync" : saved ? "check" : "save"}
+            size={15}
+            strokeWidth={2}
+            className={saving ? "animate-spin" : ""}
+          />
+          {saving ? "Salvando…" : saved ? "Salvo" : "Salvar alterações"}
         </button>
       </div>
     </div>

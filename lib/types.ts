@@ -51,7 +51,8 @@ export interface Appointment {
   channel: Channel;
   notes?: string;
   cancelReason?: string;
-  icsToken?: string;
+  meetingLink?: string | null;
+  icsToken?: string | null;
   eventType?: EventType;
 }
 

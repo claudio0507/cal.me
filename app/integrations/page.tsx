@@ -41,24 +41,16 @@ export default function IntegrationsPage() {
     },
   ]);
 
-  function toggleConnection(id: string) {
-    setIntegrations((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? {
-              ...i,
-              connected: !i.connected,
-              lastSync: !i.connected ? "agora" : undefined,
-            }
-          : i
-      )
+  function toggleConnection(_id: string) {
+    alert(
+      "Integração com calendário externo está em desenvolvimento. Por enquanto, conflitos de horário são bloqueados automaticamente usando os agendamentos no próprio Cal.me."
     );
   }
 
   return (
     <AppShell
       title="Integrações"
-      description="Conecte seus calendários externos para sincronização bidirecional e bloqueio automático de conflitos."
+      description="OAuth com Google Agenda e Microsoft 365 em desenvolvimento. Por enquanto, todos os agendamentos do Cal.me já bloqueiam conflitos automaticamente."
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
         {integrations.map((i) => (
@@ -161,18 +153,9 @@ function IntegrationCard({
         <button
           type="button"
           onClick={onToggle}
-          className={`
-            inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium
-            rounded-[var(--radius)] transition-colors
-            ${
-              connected
-                ? "border border-[var(--color-border-strong)] text-[var(--ink-900)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]"
-                : "bg-[var(--ink-900)] text-white hover:bg-[var(--ink-800)]"
-            }
-          `}
+          className="inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium border border-dashed border-[var(--color-border-strong)] text-[var(--color-muted)] rounded-[var(--radius)] transition-colors hover:bg-[var(--color-surface-2)]"
         >
-          {connected ? "Desconectar" : "Conectar"}
-          {!connected && <Icon name="arrow-right" size={14} />}
+          Em breve
         </button>
       </footer>
     </article>

@@ -1,24 +1,39 @@
 "use client";
 
-/**
- * Cal.me — TopBar (header)
- * Search, notifications, profile. Hamburger triggers Sidebar drawer on mobile.
- */
-
-import { MOCK_USER } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 
 interface TopBarProps {
   onMenuToggle: () => void;
 }
 
+interface MeUser {
+  name: string;
+  role: string | null;
+  avatarUrl: string | null;
+  username: string;
+  isAdmin?: boolean;
+}
+
 export default function TopBar({ onMenuToggle }: TopBarProps) {
-  const user = MOCK_USER;
+  const router = useRouter();
+  const [user, setUser] = useState<MeUser | null>(null);
+
+  useEffect(() => {
+    fetch("/api/users/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => u && setUser(u))
+      .catch(() => {});
+  }, []);
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   return (
-    <header
-      className="sticky top-0 z-20 h-16 flex items-center gap-4 px-5 lg:px-8 bg-[var(--color-surface)]/85 backdrop-blur border-b border-[var(--color-border)]"
-    >
+    <header className="sticky top-0 z-20 h-16 flex items-center gap-4 px-5 lg:px-8 bg-[var(--color-surface)]/85 backdrop-blur border-b border-[var(--color-border)]">
       <button
         type="button"
         onClick={onMenuToggle}
@@ -28,71 +43,52 @@ export default function TopBar({ onMenuToggle }: TopBarProps) {
         <Icon name="menu" size={20} />
       </button>
 
-      {/* Search */}
-      <div className="relative flex-1 max-w-md hidden sm:block">
-        <Icon
-          name="search"
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-2)]"
-        />
-        <input
-          type="search"
-          placeholder="Buscar agendamento, cliente ou evento…"
-          className="
-            w-full h-9 pl-9 pr-3 text-sm
-            bg-[var(--color-surface-2)] border border-transparent
-            rounded-[var(--radius)]
-            text-[var(--ink-900)] placeholder:text-[var(--color-muted-2)]
-            outline-none
-            focus:bg-[var(--color-surface)] focus:border-[var(--color-border-strong)]
-            transition-colors
-          "
-          aria-label="Buscar"
-        />
-        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline font-mono text-[10px] text-[var(--color-muted-2)] border border-[var(--color-border)] rounded px-1.5 py-0.5 bg-[var(--color-surface)]">
-          ⌘K
-        </kbd>
-      </div>
+      <div className="flex-1" />
 
-      <div className="flex-1 sm:hidden" />
-
-      {/* Right cluster */}
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="relative w-9 h-9 grid place-items-center rounded-[var(--radius)] text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] transition-colors"
-          aria-label="Notificações"
-        >
-          <Icon name="bell" size={17} />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[var(--ink-900)]" />
-        </button>
-
-        <div className="hidden lg:block w-px h-6 bg-[var(--color-border)] mx-2" />
-
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden lg:block">
-            <p className="text-sm font-medium leading-tight text-[var(--ink-900)]">{user.name}</p>
-            <p className="label text-[10px] leading-tight">Administradora</p>
-          </div>
-          <div className="relative">
-            {user.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.avatarUrl}
-                alt={user.name}
-                className="w-9 h-9 rounded-full object-cover border border-[var(--color-border)]"
+      <div className="flex items-center gap-3">
+        {user ? (
+          <>
+            <div className="text-right hidden md:block">
+              <p className="text-sm font-medium leading-tight text-[var(--ink-900)] truncate max-w-[200px]">
+                {user.name}
+              </p>
+              {user.role && (
+                <p className="text-[11px] leading-tight text-[var(--color-muted)] truncate max-w-[200px]">
+                  {user.role}
+                </p>
+              )}
+            </div>
+            <div className="relative shrink-0">
+              {user.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full object-cover border border-[var(--color-border)]"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[var(--color-surface-2)] grid place-items-center text-[var(--color-muted)]">
+                  <Icon name="user" size={16} />
+                </div>
+              )}
+              <span
+                className="absolute -bottom-0 -right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-positive)]"
+                aria-label="Online"
               />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-[var(--color-surface-2)] grid place-items-center text-[var(--color-muted)]">
-                <Icon name="user" size={16} />
-              </div>
-            )}
-            <span
-              className="absolute -bottom-0 -right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-positive)]"
-              aria-label="Online"
-            />
-          </div>
-        </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="ml-1 h-9 px-3 inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] rounded-[var(--radius)] transition-colors"
+              aria-label="Sair"
+            >
+              <Icon name="logout" size={14} />
+              <span className="hidden lg:inline">Sair</span>
+            </button>
+          </>
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-[var(--color-surface-2)] animate-pulse" />
+        )}
       </div>
     </header>
   );

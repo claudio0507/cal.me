@@ -1,12 +1,8 @@
 "use client";
 
-/**
- * Cal.me — Sidebar
- * Real client-side nav via Next Link + usePathname. Mobile drawer included.
- */
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
 interface NavItem {
@@ -29,6 +25,20 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/users/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => setIsAdmin(Boolean(u?.isAdmin)))
+      .catch(() => {});
+  }, []);
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   return (
     <>
@@ -51,9 +61,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         `}
         aria-label="Navegação principal"
       >
-        {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <span className="w-8 h-8 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
               <Icon name="logo" size={16} strokeWidth={1.8} />
             </span>
@@ -71,12 +80,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* Section: workspace */}
         <div className="px-5 pt-5 pb-2">
           <span className="label">Espaço de trabalho</span>
         </div>
 
-        <nav className="flex-1 px-3 stagger" aria-label="Seções principais">
+        <nav className="flex-1 px-3 stagger overflow-y-auto" aria-label="Seções principais">
           {PRIMARY_NAV.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -104,30 +112,48 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               </Link>
             );
           })}
+
+          {isAdmin && (
+            <>
+              <div className="pt-4 pb-2 px-3">
+                <span className="label">Administração</span>
+              </div>
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className={`
+                  group flex items-center gap-3 h-10 px-3 rounded-[var(--radius)]
+                  text-sm font-medium transition-colors
+                  ${
+                    pathname === "/admin"
+                      ? "bg-[var(--ink-900)] text-white"
+                      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)]"
+                  }
+                `}
+                aria-current={pathname === "/admin" ? "page" : undefined}
+              >
+                <Icon name="users" size={17} strokeWidth={pathname === "/admin" ? 1.8 : 1.6} />
+                <span>Usuários</span>
+              </Link>
+            </>
+          )}
         </nav>
 
-        {/* CTA */}
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 pt-3 border-t border-[var(--color-border)]">
           <Link
-            href="/dashboard"
+            href="/settings"
+            onClick={onClose}
             className="flex items-center justify-center gap-2 h-10 rounded-[var(--radius)] bg-[var(--ink-900)] hover:bg-[var(--ink-800)] text-white text-sm font-medium transition-colors"
           >
-            <Icon name="plus" size={15} strokeWidth={2} />
-            Novo evento
+            <Icon name="palette" size={15} strokeWidth={2} />
+            Personalizar página
           </Link>
         </div>
 
-        {/* Footer */}
         <div className="border-t border-[var(--color-border)] px-3 py-3 space-y-0.5">
           <button
             type="button"
-            className="flex items-center gap-3 w-full h-9 px-3 rounded-[var(--radius)] text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] transition-colors"
-          >
-            <Icon name="help" size={16} />
-            <span>Ajuda</span>
-          </button>
-          <button
-            type="button"
+            onClick={handleLogout}
             className="flex items-center gap-3 w-full h-9 px-3 rounded-[var(--radius)] text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] transition-colors"
           >
             <Icon name="logout" size={16} />

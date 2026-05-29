@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Appointment, AppointmentStatus, Channel } from "@/lib/types";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
@@ -47,9 +48,57 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
 }
 
-function AppointmentRow({ appointment }: { appointment: Appointment }) {
+interface AppointmentWithExtras extends Appointment {
+  meetingLink?: string | null;
+  icsToken?: string | null;
+}
+
+function AppointmentRow({
+  appointment,
+  onChanged,
+}: {
+  appointment: AppointmentWithExtras;
+  onChanged: () => void;
+}) {
   const status = STATUS_CONFIG[appointment.status];
   const channel = CHANNEL_CONFIG[appointment.channel];
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function cancel() {
+    if (!confirm(`Cancelar reunião com ${appointment.guestName}?`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+      if (res.ok) onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyMeetingLink() {
+    if (!appointment.meetingLink) return;
+    try {
+      await navigator.clipboard.writeText(appointment.meetingLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // ignore
+    }
+  }
+
+  function openMeeting() {
+    if (appointment.meetingLink) {
+      window.open(appointment.meetingLink, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  const canManage =
+    appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED";
 
   return (
     <li className="group grid grid-cols-[auto_1fr_auto] items-center gap-5 px-5 py-4 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-surface-2)] transition-colors">
@@ -82,42 +131,57 @@ function AppointmentRow({ appointment }: { appointment: Appointment }) {
             {channel.label}
           </span>
           <span aria-hidden="true">·</span>
-          <span className="font-mono">{appointment.guestEmail}</span>
+          <span className="font-mono truncate">{appointment.guestEmail}</span>
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED" && (
+      <div className="shrink-0 flex items-center gap-1">
+        {canManage && appointment.meetingLink && (
           <>
             <button
               type="button"
-              className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--ink-900)] transition-colors"
-              aria-label="Reagendar"
+              onClick={openMeeting}
+              className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] text-xs font-medium text-[var(--ink-900)] border border-[var(--color-border-strong)] hover:bg-[var(--color-surface)] transition-colors"
+              aria-label="Abrir reunião"
             >
-              <Icon name="edit" size={14} />
+              <Icon name="video" size={13} />
+              <span className="hidden sm:inline">Abrir</span>
             </button>
             <button
               type="button"
-              className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)] transition-colors"
-              aria-label="Cancelar"
+              onClick={copyMeetingLink}
+              className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--ink-900)] transition-colors"
+              aria-label="Copiar link da reunião"
+              title={copied ? "Copiado" : "Copiar link"}
             >
-              <Icon name="x" size={14} />
+              <Icon name={copied ? "check" : "copy"} size={14} />
             </button>
           </>
         )}
-        <button
-          type="button"
-          className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--ink-900)] transition-colors"
-          aria-label="Copiar link"
-        >
-          <Icon name="copy" size={14} />
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={busy}
+            className="w-8 h-8 grid place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-40"
+            aria-label="Cancelar"
+            title="Cancelar"
+          >
+            <Icon name="x" size={14} />
+          </button>
+        )}
       </div>
     </li>
   );
 }
 
-export default function AppointmentList({ appointments }: { appointments: Appointment[] }) {
+export default function AppointmentList({
+  appointments,
+  onChanged,
+}: {
+  appointments: AppointmentWithExtras[];
+  onChanged?: () => void;
+}) {
   const upcoming = [...appointments]
     .filter((a) => a.status !== "COMPLETED" && a.status !== "CANCELLED")
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
@@ -140,7 +204,11 @@ export default function AppointmentList({ appointments }: { appointments: Appoin
       role="list"
     >
       {upcoming.map((appointment) => (
-        <AppointmentRow key={appointment.id} appointment={appointment} />
+        <AppointmentRow
+          key={appointment.id}
+          appointment={appointment}
+          onChanged={() => onChanged?.()}
+        />
       ))}
     </ul>
   );

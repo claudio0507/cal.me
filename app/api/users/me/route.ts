@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 const MAX_SERVICE_TYPES = 5;
 const ALLOWED_DURATIONS = new Set([15, 30, 45, 60, 90]);
 const MAX_WELCOME = 240;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function GET() {
   const session = await getSession();
@@ -27,17 +28,32 @@ export async function GET() {
         orderBy: { createdAt: "asc" },
         select: { id: true, title: true, duration: true, slug: true, isActive: true },
       },
+      availability: {
+        orderBy: { dayOfWeek: "asc" },
+        select: { id: true, dayOfWeek: true, startTime: true, endTime: true, isActive: true },
+      },
     },
   });
 
   if (!user) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
-  return NextResponse.json(user);
+
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const isAdmin = adminEmails.includes(user.email.toLowerCase());
+
+  return NextResponse.json({ ...user, isAdmin });
 }
 
 interface ServiceTypeInput {
   id?: string;
   title: string;
   duration: number;
+}
+
+interface AvailabilityInput {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
 }
 
 function slugify(s: string): string {
@@ -87,6 +103,27 @@ export async function PATCH(req: NextRequest) {
       { error: `Máximo de ${MAX_SERVICE_TYPES} tipos de serviço` },
       { status: 422 }
     );
+  }
+
+  const availability: AvailabilityInput[] | undefined = Array.isArray(body.availability)
+    ? body.availability
+    : undefined;
+
+  if (availability) {
+    for (const a of availability) {
+      if (typeof a.dayOfWeek !== "number" || a.dayOfWeek < 0 || a.dayOfWeek > 6) {
+        return NextResponse.json({ error: "Dia da semana inválido" }, { status: 422 });
+      }
+      if (!TIME_RE.test(a.startTime) || !TIME_RE.test(a.endTime)) {
+        return NextResponse.json({ error: "Horário inválido" }, { status: 422 });
+      }
+      if (a.isActive && a.startTime >= a.endTime) {
+        return NextResponse.json(
+          { error: "Horário de início deve ser anterior ao fim" },
+          { status: 422 }
+        );
+      }
+    }
   }
 
   try {
@@ -149,6 +186,21 @@ export async function PATCH(req: NextRequest) {
               },
             });
           }
+        }
+      }
+
+      if (availability) {
+        await tx.availability.deleteMany({ where: { userId: session.userId } });
+        if (availability.length > 0) {
+          await tx.availability.createMany({
+            data: availability.map((a) => ({
+              userId: session.userId,
+              dayOfWeek: a.dayOfWeek,
+              startTime: a.startTime,
+              endTime: a.endTime,
+              isActive: Boolean(a.isActive),
+            })),
+          });
         }
       }
     });

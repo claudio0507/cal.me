@@ -8,7 +8,8 @@ import { Icon } from "@/components/ui/Icon";
 import { getThemeStyleVars } from "@/lib/theme";
 import { googleCalendarUrl } from "@/lib/ics";
 
-type Step = "event" | "datetime" | "details" | "confirmed";
+type Step = "datetime" | "event" | "details" | "confirmed";
+const DEFAULT_SLOT_GRANULARITY = 30;
 
 interface PublicUser {
   id: string;
@@ -62,7 +63,7 @@ export default function BookingPage({
 }
 
 function BookingFlow({ user }: { user: PublicUser }) {
-  const [step, setStep] = useState<Step>("event");
+  const [step, setStep] = useState<Step>("datetime");
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -211,28 +212,38 @@ function BookingFlow({ user }: { user: PublicUser }) {
           <Stepper step={step} />
 
           <div className="mt-8">
-            {step === "event" && (
-              <EventStep
-                events={user.eventTypes.filter((e) => e.isActive)}
-                onSelect={(e) => {
-                  setSelectedEvent(e);
-                  setStep("datetime");
+            {step === "datetime" && (
+              <DateTimeStep
+                appointments={user.appointments}
+                availability={user.availability}
+                selectedDate={selectedDate}
+                selectedTime={selectedTime}
+                onPickDate={(d) => {
+                  setSelectedDate(d);
+                  setSelectedTime(null);
+                }}
+                onPickTime={(t) => {
+                  setSelectedTime(t);
+                  setStep("event");
                 }}
               />
             )}
 
-            {step === "datetime" && selectedEvent && (
-              <DateTimeStep
-                event={selectedEvent}
+            {step === "event" && selectedDate && selectedTime && (
+              <EventStep
+                events={user.eventTypes.filter((e) => e.isActive)}
+                date={selectedDate}
+                time={selectedTime}
                 appointments={user.appointments}
-                selectedDate={selectedDate}
-                selectedTime={selectedTime}
-                onPickDate={setSelectedDate}
-                onPickTime={(t) => {
-                  setSelectedTime(t);
+                availability={user.availability}
+                onSelect={(e) => {
+                  setSelectedEvent(e);
                   setStep("details");
                 }}
-                onBack={() => setStep("event")}
+                onBack={() => {
+                  setSelectedTime(null);
+                  setStep("datetime");
+                }}
               />
             )}
 
@@ -247,7 +258,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
                 onChangeName={setGuestName}
                 onChangeEmail={setGuestEmail}
                 onChangeNotes={setNotes}
-                onBack={() => setStep("datetime")}
+                onBack={() => setStep("event")}
                 onConfirm={handleConfirm}
                 confirming={confirming}
                 error={bookingError}
@@ -273,20 +284,58 @@ function BookingFlow({ user }: { user: PublicUser }) {
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="max-w-[1080px] mx-auto px-5 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--color-muted)]">
           <p>Página de reserva alimentada por Cal.me</p>
-          <Link href="/" className="hover:text-[var(--ink-900)] transition-colors">
-            Crie a sua →
-          </Link>
+          <div className="flex items-center gap-3">
+            <ShareCalmeButton />
+            <Link href="/signup" className="hover:text-[var(--ink-900)] transition-colors">
+              Crie a sua →
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
+function ShareCalmeButton() {
+  const [copied, setCopied] = useState(false);
+  function share() {
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/signup`
+        : "https://calme-khaki.vercel.app/signup";
+    const text = `Conheça o Cal.me — crie sua página de agendamento profissional em minutos: ${url}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator
+        .share({ title: "Cal.me", text, url })
+        .catch(() => {
+          navigator.clipboard?.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        });
+      return;
+    }
+    navigator.clipboard?.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="inline-flex items-center gap-1.5 hover:text-[var(--ink-900)] transition-colors"
+      title="Compartilhar Cal.me"
+    >
+      <Icon name={copied ? "check" : "users"} size={13} />
+      {copied ? "Convite copiado" : "Indicar Cal.me"}
+    </button>
+  );
+}
+
 /* ───────────────────────── Stepper ───────────────────────── */
 function Stepper({ step }: { step: Step }) {
   const steps: { id: Step; label: string }[] = [
-    { id: "event", label: "Tipo de reunião" },
     { id: "datetime", label: "Data e horário" },
+    { id: "event", label: "Tipo de reunião" },
     { id: "details", label: "Seus dados" },
     { id: "confirmed", label: "Confirmação" },
   ];
@@ -333,57 +382,21 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
-/* ───────────────────────── Step 1 ───────────────────────── */
-function EventStep({
-  events,
-  onSelect,
-}: {
-  events: EventType[];
-  onSelect: (e: EventType) => void;
-}) {
-  return (
-    <div className="grid gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden animate-fade-in">
-      {events.map((e) => (
-        <button
-          key={e.id}
-          type="button"
-          onClick={() => onSelect(e)}
-          className="text-left bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] transition-colors px-5 py-5 grid grid-cols-[auto_1fr_auto] gap-5 items-center"
-        >
-          <span className="w-11 h-11 grid place-items-center rounded-[var(--radius)] bg-[var(--color-surface-2)] text-[var(--ink-900)]">
-            <Icon name="clock" size={18} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[16px] font-medium text-[var(--ink-900)]">{e.title}</p>
-            <p className="text-sm text-[var(--color-muted)] mt-0.5 line-clamp-2">{e.description}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-[var(--color-muted-2)]">{e.duration} min</span>
-            <Icon name="arrow-right" size={16} className="text-[var(--color-muted)]" />
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ───────────────────────── Step 2 ───────────────────────── */
+/* ───────────────────────── Step 1: DateTime ───────────────────────── */
 function DateTimeStep({
-  event,
   appointments,
+  availability,
   selectedDate,
   selectedTime,
   onPickDate,
   onPickTime,
-  onBack,
 }: {
-  event: EventType;
   appointments: Array<{ startTime: string | Date; endTime: string | Date; status: string }>;
+  availability: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
   selectedDate: Date | null;
   selectedTime: string | null;
   onPickDate: (d: Date) => void;
   onPickTime: (t: string) => void;
-  onBack: () => void;
 }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const today = useMemo(() => new Date(), []);
@@ -392,29 +405,24 @@ function DateTimeStep({
     return d;
   }, [today, monthOffset]);
 
+  const activeDays = useMemo(
+    () => new Set(availability.filter((a) => a.isActive).map((a) => a.dayOfWeek)),
+    [availability]
+  );
+
   const days = useMemo(() => buildMonth(cursor), [cursor]);
+  const effectiveDate = selectedDate ?? findFirstAvailableDate(today, activeDays);
+
   const slots = useMemo(
     () =>
-      selectedDate
-        ? generateTimeSlots(selectedDate, event.duration, appointments)
+      effectiveDate
+        ? generateTimeSlots(effectiveDate, DEFAULT_SLOT_GRANULARITY, appointments, availability)
         : [],
-    [selectedDate, event.duration, appointments]
+    [effectiveDate, appointments, availability]
   );
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-[var(--color-muted)] hover:text-[var(--ink-900)] transition-colors"
-        >
-          <Icon name="chevron-left" size={14} /> Trocar tipo de reunião
-        </button>
-        <p className="text-xs text-[var(--color-muted)]">
-          <span className="font-medium text-[var(--ink-900)]">{event.title}</span> · {event.duration} min
-        </p>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
         {/* Calendar */}
@@ -453,9 +461,9 @@ function DateTimeStep({
             {days.map((d, i) => {
               if (!d) return <span key={`empty-${i}`} />;
               const isPast = d < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-              const disabled = isPast || isWeekend;
-              const isSelected = selectedDate?.toDateString() === d.toDateString();
+              const isAvailableDay = activeDays.has(d.getDay());
+              const disabled = isPast || !isAvailableDay;
+              const isSelected = effectiveDate?.toDateString() === d.toDateString();
               const isToday = d.toDateString() === today.toDateString();
 
               return (
@@ -490,32 +498,35 @@ function DateTimeStep({
         {/* Time slots */}
         <div className="bg-[var(--color-surface)] p-5 flex flex-col">
           <span className="label mb-3">
-            {selectedDate
-              ? selectedDate.toLocaleDateString("pt-BR", {
+            {effectiveDate
+              ? effectiveDate.toLocaleDateString("pt-BR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                 })
-              : "Escolha uma data"}
+              : "Sem dias disponíveis"}
           </span>
 
-          {!selectedDate && (
+          {!effectiveDate && (
             <p className="text-sm text-[var(--color-muted)] mt-4">
-              Selecione um dia disponível no calendário ao lado.
+              Anfitrião ainda não configurou disponibilidade.
             </p>
           )}
-          {selectedDate && slots.length === 0 && (
+          {effectiveDate && slots.length === 0 && (
             <p className="text-sm text-[var(--color-muted)] mt-4">
               Sem horários disponíveis neste dia.
             </p>
           )}
-          {selectedDate && slots.length > 0 && (
+          {effectiveDate && slots.length > 0 && (
             <div className="grid grid-cols-2 gap-1.5 max-h-[360px] overflow-y-auto pr-1">
               {slots.map((t) => (
                 <button
                   key={t}
                   type="button"
-                  onClick={() => onPickTime(t)}
+                  onClick={() => {
+                    if (effectiveDate && !selectedDate) onPickDate(effectiveDate);
+                    onPickTime(t);
+                  }}
                   className={`
                     h-10 text-sm font-medium font-mono tabular-nums
                     rounded-[var(--radius-sm)] transition-colors
@@ -537,6 +548,16 @@ function DateTimeStep({
   );
 }
 
+function findFirstAvailableDate(from: Date, activeDays: Set<number>): Date | null {
+  if (activeDays.size === 0) return null;
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  for (let i = 0; i < 60; i++) {
+    if (activeDays.has(d.getDay())) return new Date(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
 function buildMonth(cursor: Date): (Date | null)[] {
   const y = cursor.getFullYear();
   const m = cursor.getMonth();
@@ -545,6 +566,114 @@ function buildMonth(cursor: Date): (Date | null)[] {
   const cells: (Date | null)[] = Array.from({ length: firstDay }, () => null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, m, d));
   return cells;
+}
+
+/* ───────────────────────── Step 2: EventStep ───────────────────────── */
+function EventStep({
+  events,
+  date,
+  time,
+  appointments,
+  availability,
+  onSelect,
+  onBack,
+}: {
+  events: EventType[];
+  date: Date;
+  time: string;
+  appointments: Array<{ startTime: string | Date; endTime: string | Date; status: string }>;
+  availability: Array<{ dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }>;
+  onSelect: (e: EventType) => void;
+  onBack: () => void;
+}) {
+  const [h, m] = time.split(":").map(Number);
+  const start = new Date(date);
+  start.setHours(h, m, 0, 0);
+
+  const dayAvail = availability.find((a) => a.isActive && a.dayOfWeek === start.getDay());
+  const dayEndMinutes = (() => {
+    if (!dayAvail) return 0;
+    const [eh, em] = dayAvail.endTime.split(":").map(Number);
+    return eh * 60 + em;
+  })();
+  const startMinutes = h * 60 + m;
+
+  const fitsAvailability = (duration: number) =>
+    !!dayAvail && startMinutes + duration <= dayEndMinutes;
+
+  const hasConflict = (duration: number) => {
+    const slotEnd = new Date(start.getTime() + duration * 60 * 1000);
+    return appointments.some((a) => {
+      if (a.status !== "CONFIRMED" && a.status !== "PENDING") return false;
+      const aStart = new Date(a.startTime);
+      const aEnd = new Date(a.endTime);
+      return start < aEnd && slotEnd > aStart;
+    });
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--color-muted)] hover:text-[var(--ink-900)] transition-colors"
+        >
+          <Icon name="chevron-left" size={14} /> Trocar data ou horário
+        </button>
+        <p className="text-xs text-[var(--color-muted)]">
+          <span className="font-medium text-[var(--ink-900)] capitalize">
+            {date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          </span>{" "}
+          às <span className="font-mono text-[var(--ink-900)]">{time}</span>
+        </p>
+      </div>
+
+      <div className="grid gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
+        {events.map((e) => {
+          const unavailable = !fitsAvailability(e.duration) || hasConflict(e.duration);
+          return (
+            <button
+              key={e.id}
+              type="button"
+              disabled={unavailable}
+              onClick={() => onSelect(e)}
+              className={`text-left px-5 py-5 grid grid-cols-[auto_1fr_auto] gap-5 items-center transition-colors ${
+                unavailable
+                  ? "bg-[var(--color-surface)] opacity-50 cursor-not-allowed"
+                  : "bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]"
+              }`}
+            >
+              <span className="w-11 h-11 grid place-items-center rounded-[var(--radius)] bg-[var(--color-surface-2)] text-[var(--ink-900)]">
+                <Icon name="clock" size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[16px] font-medium text-[var(--ink-900)]">{e.title}</p>
+                {e.description && (
+                  <p className="text-sm text-[var(--color-muted)] mt-0.5 line-clamp-2">
+                    {e.description}
+                  </p>
+                )}
+                {unavailable && (
+                  <p className="text-xs text-[var(--color-muted-2)] mt-1">
+                    Não cabe neste horário
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-[var(--color-muted-2)]">
+                  {e.duration} min
+                </span>
+                {!unavailable && (
+                  <Icon name="arrow-right" size={16} className="text-[var(--color-muted)]" />
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ───────────────────────── Step 3 ───────────────────────── */

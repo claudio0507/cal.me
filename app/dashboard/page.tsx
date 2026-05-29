@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import AppointmentList from "@/components/dashboard/AppointmentList";
@@ -20,49 +20,50 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(true);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  }, []);
+
+  const loadAppointments = useCallback(() => {
+    return fetch("/api/appointments")
+      .then((r) => {
+        if (r.status === 401) {
+          router.push("/login");
+          return [];
+        }
+        return r.json();
+      })
+      .then((data) => setAppointments(Array.isArray(data) ? data : []))
+      .catch(console.error);
+  }, [router]);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/appointments").then((r) => {
-        if (r.status === 401) { router.push("/login"); return []; }
-        return r.json();
-      }),
+      loadAppointments(),
       fetch("/api/users/me").then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([appts, me]) => {
-        setAppointments(Array.isArray(appts) ? appts : []);
+      .then(([, me]) => {
         if (me?.username) setUsername(me.username);
       })
-      .catch(console.error)
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [loadAppointments]);
 
-  const bookingUrl =
-    typeof window !== "undefined" && username
-      ? `${window.location.origin}/${username}`
-      : "";
-
-  async function handleLogout() {
-    await fetch("/api/logout", { method: "POST" });
-    router.push("/login");
-  }
+  const bookingUrl = origin && username ? `${origin}/${username}` : "";
+  const platformUrl = origin || "https://calme-khaki.vercel.app";
+  const signupUrl = `${platformUrl}/signup`;
 
   return (
     <AppShell
       title={`${greet()}.`}
       description="Resumo da sua agenda e atalhos para compartilhar a sua página."
       actions={
-        <div className="flex items-center gap-2">
-          <CopyLinkButton url={bookingUrl} />
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 h-9 px-3 text-sm font-medium text-[var(--color-muted)] border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] hover:text-[var(--ink-900)] rounded-[var(--radius)] transition-colors"
-          >
-            <Icon name="logout" size={14} />
-            Sair
-          </button>
-        </div>
+        bookingUrl ? (
+          <div className="flex items-center gap-2">
+            <CopyLinkButton url={bookingUrl} />
+          </div>
+        ) : null
       }
     >
       {loading ? (
@@ -81,21 +82,14 @@ export default function DashboardPage() {
                   Agenda em andamento
                 </h2>
               </div>
-              <button
-                type="button"
-                className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--ink-900)] transition-colors inline-flex items-center gap-1.5"
-              >
-                Ver todos
-                <Icon name="arrow-right" size={14} />
-              </button>
             </div>
-            <AppointmentList appointments={appointments} />
+            <AppointmentList appointments={appointments} onChanged={loadAppointments} />
           </section>
 
           <section className="mt-10">
-            <span className="label">Compartilhar</span>
+            <span className="label">Compartilhar sua página de reservas</span>
             <h2 className="font-display text-[22px] leading-tight text-[var(--ink-900)] mt-1 mb-4">
-              Distribuir o link da sua página
+              Distribuir o seu link
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
               <QuickAction
@@ -110,7 +104,9 @@ export default function DashboardPage() {
                 description="Mensagem pronta para enviar"
                 onClick={() =>
                   window.open(
-                    `https://wa.me/?text=${encodeURIComponent(`Agende uma reunião comigo: ${bookingUrl}`)}`,
+                    `https://wa.me/?text=${encodeURIComponent(
+                      `Agende uma reunião comigo: ${bookingUrl}`
+                    )}`,
                     "_blank",
                     "noopener,noreferrer"
                   )
@@ -122,8 +118,43 @@ export default function DashboardPage() {
                 description="Abre seu cliente de e-mail padrão"
                 onClick={() =>
                   window.open(
-                    `mailto:?subject=${encodeURIComponent("Agende um horário")}&body=${encodeURIComponent(`Olá! Escolha um horário: ${bookingUrl}`)}`,
+                    `mailto:?subject=${encodeURIComponent(
+                      "Agende um horário"
+                    )}&body=${encodeURIComponent(`Olá! Escolha um horário: ${bookingUrl}`)}`,
                     "_blank"
+                  )
+                }
+              />
+            </div>
+          </section>
+
+          <section className="mt-10">
+            <span className="label">Indicar Cal.me</span>
+            <h2 className="font-display text-[22px] leading-tight text-[var(--ink-900)] mt-1 mb-4">
+              Convidar outras pessoas a usar a ferramenta
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
+              <QuickAction
+                icon="users"
+                title="Copiar convite"
+                description={signupUrl}
+                onClick={() =>
+                  navigator.clipboard.writeText(
+                    `Conheça o Cal.me — sua página de agendamento profissional em minutos: ${signupUrl}`
+                  )
+                }
+              />
+              <QuickAction
+                icon="message-circle"
+                title="Enviar convite via WhatsApp"
+                description="Mensagem pronta para enviar"
+                onClick={() =>
+                  window.open(
+                    `https://wa.me/?text=${encodeURIComponent(
+                      `Conheça o Cal.me — crie sua página de agendamento profissional em minutos: ${signupUrl}`
+                    )}`,
+                    "_blank",
+                    "noopener,noreferrer"
                   )
                 }
               />
