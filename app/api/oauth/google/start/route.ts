@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getSession } from "@/lib/session";
 import { buildGoogleAuthUrl } from "@/lib/google";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session) return NextResponse.redirect(new URL("/login", "https://placeholder"));
+  if (!session) return NextResponse.redirect(new URL("/login", req.url));
 
   const state = crypto.randomBytes(16).toString("base64url");
   const stateToken = `${session.userId}.${state}`;
