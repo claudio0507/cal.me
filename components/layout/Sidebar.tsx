@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import Logo from "@/components/ui/Logo";
 
 interface NavItem {
   icon: IconName;
@@ -62,13 +63,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         aria-label="Navegação principal"
       >
         <div className="flex items-center justify-between h-16 px-5 border-b border-[var(--color-border)]">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <span className="w-8 h-8 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
-              <Icon name="logo" size={16} strokeWidth={1.8} />
-            </span>
-            <span className="font-display text-[18px] leading-none tracking-tight text-[var(--ink-900)]">
-              Cal<span className="text-[var(--ink-400)]">.</span>me
-            </span>
+          <Link href="/dashboard" aria-label="Cal.me">
+            <Logo size="sm" />
           </Link>
           <button
             type="button"

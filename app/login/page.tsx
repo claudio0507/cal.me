@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import Logo from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,13 +45,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-9 h-9 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
-              <Icon name="logo" size={17} strokeWidth={1.8} />
-            </span>
-            <span className="font-display text-[20px] leading-none tracking-tight text-[var(--ink-900)]">
-              Cal<span className="text-[var(--ink-400)]">.</span>me
-            </span>
+          <Link href="/" aria-label="Cal.me">
+            <Logo size="md" tagline />
           </Link>
         </div>
 

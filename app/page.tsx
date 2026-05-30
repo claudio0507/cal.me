@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import Logo from "@/components/ui/Logo";
 
 const STEPS: { n: string; title: string; description: string }[] = [
   {
@@ -46,16 +47,8 @@ export default function Home() {
       {/* Top bar */}
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="max-w-[1180px] mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-8 h-8 grid place-items-center rounded-[var(--radius)] bg-[var(--ink-900)] text-white">
-              <Icon name="logo" size={16} strokeWidth={1.8} />
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-[20px] leading-none tracking-tight text-[var(--ink-900)]">
-                Cal<span className="text-[var(--ink-400)]">.</span>me
-              </span>
-              <span className="label hidden sm:inline">Agendamento corporativo</span>
-            </div>
+          <Link href="/" aria-label="Cal.me">
+            <Logo size="md" tagline />
           </Link>
 
           <nav className="flex items-center gap-1 sm:gap-2">
