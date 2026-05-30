@@ -206,7 +206,7 @@ function BookingFlow({ user }: { user: PublicUser }) {
             </div>
           </section>
 
-          <div className="pb-10 lg:pb-14">
+          <div className="pb-10 lg:pb-14 max-w-[820px] mx-auto">
             <span className="label block mb-3">Reservar um horário</span>
           {/* Steps */}
           <Stepper step={step} />
@@ -278,6 +278,8 @@ function BookingFlow({ user }: { user: PublicUser }) {
             )}
           </div>
           </div>
+
+          <PromoteSignup hostName={user.name} step={step} />
         </div>
       </main>
 
@@ -293,6 +295,82 @@ function BookingFlow({ user }: { user: PublicUser }) {
         </div>
       </footer>
     </div>
+  );
+}
+
+function PromoteSignup({ hostName, step }: { hostName: string; step: Step }) {
+  const isConfirmed = step === "confirmed";
+  return (
+    <section
+      className="mt-8 lg:mt-12 mb-10 lg:mb-14 relative overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--ink-900)] text-white"
+      style={{ borderColor: "var(--ink-800)" }}
+    >
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 100% 0%, var(--color-brand) 0%, transparent 50%), radial-gradient(circle at 0% 100%, var(--color-brand-soft) 0%, transparent 40%)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 lg:gap-10 items-center p-6 lg:p-8">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-3">
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] px-2 py-1 rounded-sm"
+              style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
+            >
+              <span className="w-1 h-1 rounded-full bg-current" />
+              Cal.me
+            </span>
+            <span className="label text-white/50 text-[10px]">para profissionais e empresas</span>
+          </div>
+
+          <h2 className="font-display text-[clamp(22px,2.5vw,30px)] leading-[1.1] tracking-[-0.01em] mb-3">
+            {isConfirmed
+              ? `Gostou da experiência? Tenha uma página como a de ${hostName.split(" ")[0]}.`
+              : `Tenha uma página de agendamento profissional como a de ${hostName.split(" ")[0]}.`}
+          </h2>
+          <p className="text-[14px] lg:text-[15px] leading-relaxed text-white/70 max-w-[58ch] mb-5">
+            Configure sua marca, defina sua agenda, compartilhe um link. Cal.me
+            cuida de e-mail de confirmação, convite .ics e link de reunião
+            (Google Meet / Microsoft Teams).
+          </p>
+
+          <ul className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-2 text-[13px] text-white/80 mb-6">
+            <li className="flex items-center gap-2">
+              <Icon name="check" size={14} className="text-[var(--color-brand)] shrink-0" strokeWidth={2.4} />
+              30 segundos pra começar
+            </li>
+            <li className="flex items-center gap-2">
+              <Icon name="check" size={14} className="text-[var(--color-brand)] shrink-0" strokeWidth={2.4} />
+              Sincroniza Google + Outlook
+            </li>
+            <li className="flex items-center gap-2">
+              <Icon name="check" size={14} className="text-[var(--color-brand)] shrink-0" strokeWidth={2.4} />
+              Grátis para começar
+            </li>
+          </ul>
+        </div>
+
+        <div className="flex lg:flex-col items-stretch gap-2 lg:min-w-[200px]">
+          <Link
+            href="/signup"
+            className="inline-flex items-center justify-center gap-2 h-11 lg:h-12 px-6 text-sm font-semibold rounded-[var(--radius)] transition-transform hover:translate-y-[-1px]"
+            style={{ background: "var(--color-brand)", color: "var(--color-brand-on)" }}
+          >
+            Criar minha conta
+            <Icon name="arrow-right" size={15} strokeWidth={2.2} />
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-1.5 h-11 lg:h-10 px-4 text-xs lg:text-[13px] font-medium text-white/80 hover:text-white border border-white/15 hover:border-white/30 rounded-[var(--radius)] transition-colors"
+          >
+            Ver como funciona
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -435,9 +513,9 @@ function DateTimeStep({
   return (
     <div className="animate-fade-in">
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
         {/* Calendar */}
-        <div className="bg-[var(--color-surface)] p-5">
+        <div className="bg-[var(--color-surface)] p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display text-[18px] tracking-tight text-[var(--ink-900)] capitalize">
               {cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
