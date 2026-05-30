@@ -77,6 +77,8 @@ model Appointment {
   cancelReason String?
   meetingLink  String?           // link da reunião (Google Meet, Teams, Jitsi)
   icsToken     String?           @unique  // token único para o link de convite .ics
+  externalEventId String?        // ID do evento no calendário externo (Google)
+  externalProvider Provider?     // provedor onde o evento foi criado
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 

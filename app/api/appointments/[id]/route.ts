@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { deleteCalendarEvent } from "@/lib/google";
 
 export async function PATCH(
   req: NextRequest,
@@ -20,6 +21,13 @@ export async function PATCH(
 
   if (action === "cancel") {
     const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : null;
+
+    if (appointment.externalProvider === "GOOGLE" && appointment.externalEventId) {
+      await deleteCalendarEvent(session.userId, appointment.externalEventId).catch((err) =>
+        console.error("[appointments] google delete failed", err)
+      );
+    }
+
     await prisma.appointment.update({
       where: { id },
       data: { status: "CANCELLED", cancelReason: reason },

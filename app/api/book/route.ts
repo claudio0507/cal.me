@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendBookingEmails } from "@/lib/email";
+import { fetchBusyRanges, createCalendarEvent } from "@/lib/google";
 
-function generateMeetingLink(): string {
+function generateJitsiLink(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   const rand = (n: number) =>
     Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
@@ -52,7 +53,43 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const meetingLink = generateMeetingLink();
+  const googleBusy = await fetchBusyRanges(user.id, start, end).catch(() => []);
+  const googleConflict = googleBusy.some((b) => start < b.end && end > b.start);
+  if (googleConflict) {
+    return NextResponse.json(
+      { error: "Horário ocupado no calendário do anfitrião. Escolha outro." },
+      { status: 409 }
+    );
+  }
+
+  let meetingLink = generateJitsiLink();
+  let externalEventId: string | null = null;
+  let externalProvider: "GOOGLE" | null = null;
+
+  const gEvent = await createCalendarEvent({
+    userId: user.id,
+    summary: `${eventType.title} · ${guestName}`,
+    description: [
+      `Reunião agendada via Cal.me com ${guestName} (${guestEmail}).`,
+      notes ? `Observações: ${notes}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    start,
+    end,
+    attendeeEmail: guestEmail,
+    attendeeName: guestName,
+  }).catch((err) => {
+    console.error("[book] createCalendarEvent failed", err);
+    return null;
+  });
+
+  if (gEvent) {
+    externalEventId = gEvent.id;
+    externalProvider = "GOOGLE";
+    if (gEvent.hangoutLink) meetingLink = gEvent.hangoutLink;
+  }
+
   const icsToken = crypto.randomBytes(24).toString("base64url");
 
   const appointment = await prisma.appointment.create({
@@ -69,6 +106,8 @@ export async function POST(req: NextRequest) {
       notes: notes || null,
       meetingLink,
       icsToken,
+      externalEventId,
+      externalProvider,
     },
   });
 

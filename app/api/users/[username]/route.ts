@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { fetchBusyRanges } from "@/lib/google";
 
 export async function GET(
   _req: NextRequest,
@@ -40,5 +41,17 @@ export async function GET(
 
   if (!user) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  return NextResponse.json(user);
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+  const googleBusy = await fetchBusyRanges(user.id, now, windowEnd).catch(() => []);
+  const merged = [
+    ...user.appointments,
+    ...googleBusy.map((b) => ({
+      startTime: b.start.toISOString(),
+      endTime: b.end.toISOString(),
+      status: "CONFIRMED" as const,
+    })),
+  ];
+
+  return NextResponse.json({ ...user, appointments: merged });
 }
