@@ -14,6 +14,7 @@ interface IntegrationDTO {
 
 interface IntegrationStatus {
   google: IntegrationDTO | null;
+  microsoft: IntegrationDTO | null;
 }
 
 export default function IntegrationsPage() {
@@ -34,7 +35,7 @@ export default function IntegrationsPage() {
 
 function IntegrationsView() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<IntegrationStatus>({ google: null });
+  const [status, setStatus] = useState<IntegrationStatus>({ google: null, microsoft: null });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -63,10 +64,23 @@ function IntegrationsView() {
         text: `Falha ao conectar Google Calendar${reason ? ` (${reason})` : ""}. Tente novamente.`,
       });
     }
+    const m = searchParams.get("microsoft");
+    if (m === "connected") {
+      setBanner({ tone: "success", text: "Microsoft 365 conectado com sucesso." });
+    } else if (m === "error") {
+      const reason = searchParams.get("reason") ?? "";
+      setBanner({
+        tone: "error",
+        text: `Falha ao conectar Microsoft 365${reason ? ` (${reason})` : ""}. Tente novamente.`,
+      });
+    }
   }, [searchParams]);
 
   async function connectGoogle() {
     window.location.href = "/api/oauth/google/start";
+  }
+  async function connectMicrosoft() {
+    window.location.href = "/api/oauth/microsoft/start";
   }
 
   async function disconnectGoogle() {
@@ -75,8 +89,24 @@ function IntegrationsView() {
     try {
       const res = await fetch("/api/oauth/google/disconnect", { method: "POST" });
       if (res.ok) {
-        setStatus({ google: null });
+        setStatus((s) => ({ ...s, google: null }));
         setBanner({ tone: "success", text: "Google Calendar desconectado." });
+      } else {
+        setBanner({ tone: "error", text: "Erro ao desconectar." });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnectMicrosoft() {
+    if (!confirm("Desconectar o Microsoft 365? Para revogar completamente, acesse account.microsoft.com → Privacidade → Apps e serviços.")) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/oauth/microsoft/disconnect", { method: "POST" });
+      if (res.ok) {
+        setStatus((s) => ({ ...s, microsoft: null }));
+        setBanner({ tone: "success", text: "Microsoft 365 desconectado." });
       } else {
         setBanner({ tone: "error", text: "Erro ao desconectar." });
       }
@@ -124,13 +154,13 @@ function IntegrationsView() {
             <IntegrationCard
               name="Microsoft 365"
               icon="mail"
-              description="Outlook / Microsoft 365. Em desenvolvimento."
-              connected={false}
-              expiresAt={null}
-              onConnect={() => {}}
-              onDisconnect={() => {}}
-              busy={false}
-              available={false}
+              description="Outlook / Microsoft 365: conflitos da sua agenda bloqueiam slots no Cal.me, e cada reserva confirmada cria evento no Outlook (com link do Microsoft Teams)."
+              connected={Boolean(status.microsoft?.isActive)}
+              expiresAt={status.microsoft?.expiresAt ?? null}
+              onConnect={connectMicrosoft}
+              onDisconnect={disconnectMicrosoft}
+              busy={busy}
+              available={true}
             />
           </div>
 

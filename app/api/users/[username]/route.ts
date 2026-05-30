@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchBusyRanges } from "@/lib/google";
+import { fetchBusyRanges as fetchGoogleBusy } from "@/lib/google";
+import { fetchMicrosoftBusy } from "@/lib/microsoft";
 
 export async function GET(
   _req: NextRequest,
@@ -43,10 +44,13 @@ export async function GET(
 
   const now = new Date();
   const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-  const googleBusy = await fetchBusyRanges(user.id, now, windowEnd).catch(() => []);
+  const [googleBusy, msBusy] = await Promise.all([
+    fetchGoogleBusy(user.id, now, windowEnd).catch(() => []),
+    fetchMicrosoftBusy(user.id, now, windowEnd).catch(() => []),
+  ]);
   const merged = [
     ...user.appointments,
-    ...googleBusy.map((b) => ({
+    ...[...googleBusy, ...msBusy].map((b) => ({
       startTime: b.start.toISOString(),
       endTime: b.end.toISOString(),
       status: "CONFIRMED" as const,

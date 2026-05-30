@@ -12,6 +12,7 @@ export async function GET() {
   });
 
   const google = integrations.find((i) => i.provider === "GOOGLE") ?? null;
+  const microsoft = integrations.find((i) => i.provider === "MICROSOFT") ?? null;
 
-  return NextResponse.json({ google });
+  return NextResponse.json({ google, microsoft });
 }

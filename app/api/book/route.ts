@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendBookingEmails } from "@/lib/email";
-import { fetchBusyRanges, createCalendarEvent } from "@/lib/google";
+import { fetchBusyRanges as fetchGoogleBusy, createCalendarEvent as createGoogleEvent } from "@/lib/google";
+import { fetchMicrosoftBusy, createMicrosoftEvent } from "@/lib/microsoft";
 
 function generateJitsiLink(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -53,9 +54,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const googleBusy = await fetchBusyRanges(user.id, start, end).catch(() => []);
-  const googleConflict = googleBusy.some((b) => start < b.end && end > b.start);
-  if (googleConflict) {
+  const [googleBusy, msBusy] = await Promise.all([
+    fetchGoogleBusy(user.id, start, end).catch(() => []),
+    fetchMicrosoftBusy(user.id, start, end).catch(() => []),
+  ]);
+  const externalBusy = [...googleBusy, ...msBusy];
+  const externalConflict = externalBusy.some((b) => start < b.end && end > b.start);
+  if (externalConflict) {
     return NextResponse.json(
       { error: "Horário ocupado no calendário do anfitrião. Escolha outro." },
       { status: 409 }
@@ -64,9 +69,9 @@ export async function POST(req: NextRequest) {
 
   let meetingLink = generateJitsiLink();
   let externalEventId: string | null = null;
-  let externalProvider: "GOOGLE" | null = null;
+  let externalProvider: "GOOGLE" | "MICROSOFT" | null = null;
 
-  const gEvent = await createCalendarEvent({
+  const gEvent = await createGoogleEvent({
     userId: user.id,
     summary: `${eventType.title} · ${guestName}`,
     description: [
@@ -80,7 +85,7 @@ export async function POST(req: NextRequest) {
     attendeeEmail: guestEmail,
     attendeeName: guestName,
   }).catch((err) => {
-    console.error("[book] createCalendarEvent failed", err);
+    console.error("[book] google createEvent failed", err);
     return null;
   });
 
@@ -88,6 +93,27 @@ export async function POST(req: NextRequest) {
     externalEventId = gEvent.id;
     externalProvider = "GOOGLE";
     if (gEvent.hangoutLink) meetingLink = gEvent.hangoutLink;
+  } else {
+    const msEvent = await createMicrosoftEvent({
+      userId: user.id,
+      subject: `${eventType.title} · ${guestName}`,
+      bodyHtml: `<p>Reunião agendada via Cal.me com ${guestName} (${guestEmail}).</p>${
+        notes ? `<p><strong>Observações:</strong> ${notes}</p>` : ""
+      }`,
+      start,
+      end,
+      attendeeEmail: guestEmail,
+      attendeeName: guestName,
+    }).catch((err) => {
+      console.error("[book] microsoft createEvent failed", err);
+      return null;
+    });
+
+    if (msEvent) {
+      externalEventId = msEvent.id;
+      externalProvider = "MICROSOFT";
+      if (msEvent.onlineMeeting?.joinUrl) meetingLink = msEvent.onlineMeeting.joinUrl;
+    }
   }
 
   const icsToken = crypto.randomBytes(24).toString("base64url");
