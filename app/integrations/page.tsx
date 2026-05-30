@@ -262,10 +262,8 @@ function IntegrationCard({
             }`}
           />
           <span className="text-[var(--color-muted)]">
-            {connected && expiresAt
-              ? `Token expira em ${new Date(expiresAt).toLocaleString("pt-BR")}`
-              : connected
-              ? "Conectado"
+            {connected
+              ? "Conectado · sincronização ativa"
               : available
               ? "Nenhuma conta vinculada"
               : "Em breve"}
