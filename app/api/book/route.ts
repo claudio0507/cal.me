@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendBookingEmails } from "@/lib/email";
+import { createCalendarEvent } from "@/lib/google-calendar";
 
 function generateMeetingLink(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -92,6 +93,17 @@ export async function POST(req: NextRequest) {
     icsToken,
     brandColor: user.primaryColor,
   }).catch((err) => console.error("[book] email error", err));
+
+  // Create Google Calendar event (async, non-blocking)
+  createCalendarEvent(user.id, {
+    summary: `${eventType.title} - ${guestName}`,
+    description: notes || `Agendamento via Cal.me\n\nConvidado: ${guestName} <${guestEmail}>`,
+    start,
+    end,
+    attendeeEmail: guestEmail,
+    attendeeName: guestName,
+    location: meetingLink,
+  }).catch((err) => console.error("[book] Google Calendar error:", err));
 
   return NextResponse.json({ appointment, meetingLink, icsToken }, { status: 201 });
 }

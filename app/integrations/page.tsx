@@ -2,10 +2,11 @@
 
 /**
  * Cal.me — Integrations
- * Connect Google / Microsoft calendars + webhook & .ics info.
+ * Connect Google / Microsoft calendars
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
@@ -20,13 +21,14 @@ interface Integration {
 }
 
 export default function IntegrationsPage() {
+  const searchParams = useSearchParams();
   const [integrations, setIntegrations] = useState<Integration[]>([
     {
       id: "int_google",
       provider: "GOOGLE",
       name: "Google Calendar",
       description:
-        "Sincronização bidirecional com Google Workspace ou Gmail. Conflitos bloqueados em tempo real.",
+        "Sincronização bidirecional com Google Workspace ou Gmail. Cria eventos automaticamente quando alguém agenda.",
       icon: "calendar",
       connected: false,
     },
@@ -40,24 +42,115 @@ export default function IntegrationsPage() {
       connected: false,
     },
   ]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  function toggleConnection(_id: string) {
-    alert(
-      "Integração com calendário externo está em desenvolvimento. Por enquanto, conflitos de horário são bloqueados automaticamente usando os agendamentos no próprio Cal.me."
-    );
+  // Handle OAuth callback messages
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+
+    if (success === "connected") {
+      setMessage({ type: "success", text: "Google Calendar conectado com sucesso!" });
+    } else if (error === "oauth_denied") {
+      setMessage({ type: "error", text: "Permissão negada. Tente novamente." });
+    } else if (error) {
+      setMessage({ type: "error", text: "Erro ao conectar. Tente novamente." });
+    }
+
+    // Clear message after 5 seconds
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  // Fetch integration status
+  useEffect(() => {
+    async function fetchStatus() {
+      try {
+        const res = await fetch("/api/integrations/google");
+        if (res.ok) {
+          const data = await res.json();
+          setIntegrations((prev) =>
+            prev.map((i) =>
+              i.provider === "GOOGLE"
+                ? {
+                    ...i,
+                    connected: data.connected,
+                    lastSync: data.lastSync
+                      ? new Date(data.lastSync).toLocaleDateString("pt-BR")
+                      : undefined,
+                  }
+                : i
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch integration status:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStatus();
+  }, []);
+
+  async function toggleConnection(id: string) {
+    const integration = integrations.find((i) => i.id === id);
+    if (!integration) return;
+
+    if (integration.provider === "GOOGLE") {
+      if (integration.connected) {
+        // Disconnect
+        try {
+          const res = await fetch("/api/integrations/google", { method: "DELETE" });
+          if (res.ok) {
+            setIntegrations((prev) =>
+              prev.map((i) =>
+                i.id === id
+                  ? { ...i, connected: false, lastSync: undefined }
+                  : i
+              )
+            );
+            setMessage({ type: "success", text: "Google Calendar desconectado." });
+          }
+        } catch (err) {
+          setMessage({ type: "error", text: "Erro ao desconectar." });
+        }
+      } else {
+        // Connect - redirect to OAuth
+        window.location.href = "/api/auth/google";
+      }
+    } else {
+      alert("Integração Microsoft 365 em desenvolvimento.");
+    }
   }
 
   return (
     <AppShell
       title="Integrações"
-      description="OAuth com Google Agenda e Microsoft 365 em desenvolvimento. Por enquanto, todos os agendamentos do Cal.me já bloqueiam conflitos automaticamente."
+      description="Conecte Google Agenda e Microsoft 365 para sincronização automática de eventos."
     >
+      {message && (
+        <div
+          className={`mb-6 p-4 rounded-[var(--radius)] border ${
+            message.type === "success"
+              ? "bg-[var(--color-positive-soft)] border-[var(--color-positive)]/20 text-[var(--color-positive)]"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius)] overflow-hidden">
         {integrations.map((i) => (
           <IntegrationCard
             key={i.id}
             integration={i}
             onToggle={() => toggleConnection(i.id)}
+            loading={loading}
           />
         ))}
       </div>
@@ -80,29 +173,6 @@ export default function IntegrationsPage() {
               padronizado. O cliente recebe a notificação no provedor padrão
               (Apple Mail, Gmail, Outlook), mesmo sem conexões OAuth.
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <SecondaryLink icon="external-link">Documentação do webhook</SecondaryLink>
-              <SecondaryLink icon="mail">Personalizar template de e-mail</SecondaryLink>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-6 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] p-6">
-        <div className="flex items-start gap-4">
-          <span className="w-10 h-10 grid place-items-center rounded-[var(--radius)] bg-[var(--color-surface-2)] text-[var(--ink-900)] shrink-0">
-            <Icon name="shield" size={18} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-[15px] font-medium text-[var(--ink-900)] mb-1">
-              Privacidade & escopo de acesso
-            </h2>
-            <p className="text-sm text-[var(--color-muted)] leading-relaxed">
-              Solicitamos apenas leitura de eventos para bloquear conflitos e
-              escrita em um calendário designado para criar agendamentos. Tokens
-              ficam criptografados em repouso (AES-256) e nunca são expostos no
-              cliente.
-            </p>
           </div>
         </div>
       </section>
@@ -113,9 +183,11 @@ export default function IntegrationsPage() {
 function IntegrationCard({
   integration,
   onToggle,
+  loading,
 }: {
   integration: Integration;
   onToggle: () => void;
+  loading: boolean;
 }) {
   const { connected, name, description, icon, lastSync } = integration;
 
@@ -153,9 +225,18 @@ function IntegrationCard({
         <button
           type="button"
           onClick={onToggle}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium border border-dashed border-[var(--color-border-strong)] text-[var(--color-muted)] rounded-[var(--radius)] transition-colors hover:bg-[var(--color-surface-2)]"
+          disabled={loading}
+          className={`
+            inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-[var(--radius)] transition-colors
+            ${
+              connected
+                ? "border border-[var(--color-border-strong)] text-[var(--color-muted)] hover:bg-[var(--color-surface-2)]"
+                : "bg-[var(--ink-900)] text-white hover:bg-[var(--ink-700)]"
+            }
+            ${loading ? "opacity-50 cursor-not-allowed" : ""}
+          `}
         >
-          Em breve
+          {loading ? "Carregando..." : connected ? "Desconectar" : "Conectar"}
         </button>
       </footer>
     </article>
@@ -178,23 +259,5 @@ function StatusPill({ connected }: { connected: boolean }) {
       <span className="w-1 h-1 rounded-full bg-current" />
       {connected ? "Conectado" : "Desconectado"}
     </span>
-  );
-}
-
-function SecondaryLink({
-  icon,
-  children,
-}: {
-  icon: IconName;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-[var(--ink-900)] border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)] rounded-[var(--radius-sm)] transition-colors"
-    >
-      <Icon name={icon} size={13} />
-      {children}
-    </button>
   );
 }
