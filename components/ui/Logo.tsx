@@ -78,9 +78,17 @@ export default function Logo({
 }
 
 /**
- * The mark — a rounded square (the "page") with a single dot at center
- * (the "moment marked"). Mirrors the wordmark dot. Single shape, memorable.
+ * The mark — a 3×3 grid of cells. Filled cells suggest "agenda preenchida";
+ * outlined cells are open slots. The asymmetric pattern reads as a real
+ * calendar week with bookings, not a structured logo motif.
+ *
+ * Pattern (1=filled, 0=empty):
+ *   1 1 0
+ *   0 1 0
+ *   1 0 1
  */
+const MARK_PATTERN = [1, 1, 0, 0, 1, 0, 1, 0, 1];
+
 export function LogoMark({
   size = 32,
   inverted = false,
@@ -88,8 +96,11 @@ export function LogoMark({
   size?: number;
   inverted?: boolean;
 }) {
-  const bg = inverted ? "white" : "var(--ink-900)";
-  const fg = inverted ? "var(--ink-900)" : "white";
+  const color = inverted ? "white" : "var(--ink-900)";
+  const cell = 8;
+  const gap = 2;
+  const offset = 2;
+
   return (
     <svg
       width={size}
@@ -101,11 +112,24 @@ export function LogoMark({
       className="shrink-0"
       style={{ display: "block" }}
     >
-      <rect x="0" y="0" width="32" height="32" rx="8" fill={bg} />
-      {/* Slot bar — top "page banner" */}
-      <rect x="7" y="10" width="18" height="2.4" rx="1.2" fill={fg} opacity="0.45" />
-      {/* The dot — your moment, mirrors wordmark · */}
-      <circle cx="16" cy="20" r="3.4" fill={fg} />
+      {MARK_PATTERN.map((filled, i) => {
+        const row = Math.floor(i / 3);
+        const col = i % 3;
+        const x = offset + col * (cell + gap);
+        const y = offset + row * (cell + gap);
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={y}
+            width={cell}
+            height={cell}
+            rx={1.6}
+            fill={color}
+            opacity={filled ? 1 : 0.18}
+          />
+        );
+      })}
     </svg>
   );
 }
