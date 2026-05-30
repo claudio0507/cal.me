@@ -160,6 +160,39 @@ export default function DashboardPage() {
               />
             </div>
           </section>
+
+          <section className="mt-10">
+            <span className="label">Suporte</span>
+            <h2 className="font-display text-[22px] leading-tight text-[var(--ink-900)] mt-1 mb-4">
+              Precisa de ajuda?
+            </h2>
+            <a
+              href="https://wa.me/5518991254923?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20com%20o%20Cal.me"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] px-5 py-5 flex items-center justify-between gap-4 hover:bg-[var(--color-surface-2)] transition-colors group"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <span className="w-10 h-10 grid place-items-center rounded-[var(--radius)] bg-[var(--color-surface-2)] text-[var(--ink-900)] group-hover:bg-[var(--ink-900)] group-hover:text-white transition-colors shrink-0">
+                  <Icon name="message-circle" size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-[var(--ink-900)]">
+                    Fale com nosso suporte
+                  </p>
+                  <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
+                    Problemas, melhorias ou parcerias —{" "}
+                    <span className="font-mono text-[var(--ink-800)]">+55 18 99125-4923</span>
+                  </p>
+                </div>
+              </div>
+              <Icon
+                name="arrow-right"
+                size={15}
+                className="text-[var(--color-muted-2)] group-hover:text-[var(--ink-900)] group-hover:translate-x-0.5 transition-all shrink-0"
+              />
+            </a>
+          </section>
         </>
       )}
     </AppShell>

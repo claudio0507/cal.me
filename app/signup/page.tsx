@@ -182,6 +182,21 @@ export default function SignupPage() {
             </Link>
           </p>
         </div>
+
+        <div className="mt-6 px-5 py-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius)] text-center">
+          <p className="text-[12px] text-[var(--color-muted)] leading-relaxed">
+            Problemas, melhorias ou parcerias? Fale com nosso suporte.
+          </p>
+          <a
+            href="https://wa.me/5518991254923?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20com%20o%20Cal.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-[13px] font-medium text-[var(--ink-900)] hover:underline"
+          >
+            <Icon name="message-circle" size={13} />
+            +55 18 99125-4923
+          </a>
+        </div>
       </div>
     </div>
   );
